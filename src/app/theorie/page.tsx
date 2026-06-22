@@ -16,6 +16,7 @@ import { CreditWallDiagram } from "@/components/theorie/CreditWallDiagram";
 import { OrganismLoopDiagram } from "@/components/theorie/OrganismLoopDiagram";
 import { ReservoirMemoryDemo } from "@/components/theorie/ReservoirMemoryDemo";
 import { SigmaDemo } from "@/components/theorie/SigmaDemo";
+import { LiveOrganism } from "@/components/theorie/LiveOrganism";
 
 
 export default function TheoriePage() {
@@ -582,6 +583,11 @@ export default function TheoriePage() {
               Note : le corps (capteurs, moteur) et la démarche de fourrage sont
               de la <em>scène codée</em> — pas du comportement appris. Seul le
               lecteur évolue.
+            </p>
+            {/* Simulation de fourrage en direct — pause automatique hors écran */}
+            <LiveOrganism theme={theme.canvas} />
+            <p className="mt-2 text-center font-mono text-[11px] text-white/40">
+              le réel = activité du réservoir + politique apprise · le corps = scène codée
             </p>
           </Chapter>
 
