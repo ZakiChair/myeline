@@ -9,39 +9,12 @@ import { PropagationDemo } from "@/components/PropagationDemo";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { Chapter } from "@/components/theorie/Chapter";
 import { TheoryNav } from "@/components/theorie/TheoryNav";
-import { GlossaryTerm } from "@/components/theorie/Glossary";
+import { GlossaryTerm, Glossary } from "@/components/theorie/Glossary";
 import { ACTES, sectionLaPlusVisible } from "@/lib/theory-nav";
+import { ProvenResults } from "@/components/theorie/ProvenResults";
 import { CreditWallDiagram } from "@/components/theorie/CreditWallDiagram";
 import { OrganismLoopDiagram } from "@/components/theorie/OrganismLoopDiagram";
 
-// Enveloppe légère pour les sections Acte V (correspondance, références) — conservées
-// telles quelles pour Task 11. Ne pas supprimer.
-function Section({
-  eyebrow,
-  title,
-  children,
-}: {
-  eyebrow: string;
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="mt-14 border-t border-white/[0.07] pt-10">
-      <p
-        className="font-mono text-[11px] tracking-[0.2em] uppercase"
-        style={{ color: "var(--a1)" }}
-      >
-        {eyebrow}
-      </p>
-      <h2 className="mt-3 font-serif text-2xl leading-tight text-white sm:text-3xl">
-        {title}
-      </h2>
-      <div className="mt-4 space-y-4 text-[15px] leading-relaxed text-white/70">
-        {children}
-      </div>
-    </section>
-  );
-}
 
 export default function TheoriePage() {
   const { themeId, setThemeId, theme } = useTheme();
@@ -603,8 +576,25 @@ export default function TheoriePage() {
             </p>
           </Chapter>
 
-          {/* === Acte V conservé pour Task 11 — ne pas supprimer === */}
-          <Section eyebrow="la correspondance" title="Des curseurs à la biologie">
+          {/* ═══════════════════════════════════════════════════════════
+              ACTE V · Le bilan
+              ═══════════════════════════════════════════════════════════ */}
+
+          <Chapter
+            id="preuves"
+            eyebrow="le bilan · acte V"
+            title="Ce qu'on a démontré"
+            enUnePhrase="Chaque capacité est mesurée ; on distingue ce qui est garanti de ce qui est seulement observé, et ce qui reste ouvert."
+          >
+            <ProvenResults />
+          </Chapter>
+
+          <Chapter
+            id="correspondance"
+            eyebrow="la correspondance · acte V"
+            title="Des curseurs à la biologie"
+            enUnePhrase="Chaque réglage de l'interface a un sens neuroscientifique précis."
+          >
             <p>Chaque réglage de l&apos;interface a un sens neuroscientifique :</p>
             <div className="overflow-hidden rounded-xl border border-white/[0.08]">
               <table className="w-full font-mono text-[12.5px]">
@@ -637,9 +627,23 @@ export default function TheoriePage() {
                 </tbody>
               </table>
             </div>
-          </Section>
+          </Chapter>
 
-          <Section eyebrow="pour aller plus loin" title="Références">
+          <Chapter
+            id="glossaire"
+            eyebrow="les définitions · acte V"
+            title="Glossaire"
+            enUnePhrase="Les termes clés de la simulation, définis sans jargon superflu."
+          >
+            <Glossary />
+          </Chapter>
+
+          <Chapter
+            id="references"
+            eyebrow="pour aller plus loin · acte V"
+            title="Références"
+            enUnePhrase="Les travaux fondateurs sur lesquels Myéline s'appuie."
+          >
             <ul className="space-y-2 font-serif text-[15px] text-white/65">
               <li>
                 S. Ramón y Cajal —{" "}
@@ -660,14 +664,30 @@ export default function TheoriePage() {
               </li>
               <li>
                 J. M. Beggs &amp; D. Plenz —{" "}
-                <em>
-                  Neuronal avalanches in neocortical circuits
-                </em>
+                <em>Neuronal avalanches in neocortical circuits</em>
                 , J. Neurosci. (2003)
               </li>
+              <li>
+                G. Hoerzer, R. Legenstein &amp; W. Maass —{" "}
+                <em>
+                  Emergence of complex computational structures from chaotic
+                  neural networks through reward-modulated Hebbian learning
+                </em>{" "}
+                (2014)
+              </li>
+              <li>
+                R. S. Sutton &amp; A. G. Barto —{" "}
+                <em>Reinforcement Learning</em> (REINFORCE)
+              </li>
+              <li>
+                J. Wilting &amp; V. Priesemann — estimation du ratio de
+                branchement (2018)
+              </li>
+              <li>
+                V. Braitenberg — <em>Vehicles</em> (1984)
+              </li>
             </ul>
-          </Section>
-          {/* === Fin Acte V conservé pour Task 11 === */}
+          </Chapter>
 
           <footer className="mt-16 border-t border-white/[0.07] pt-8">
             <Link
