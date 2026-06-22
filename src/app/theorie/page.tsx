@@ -15,6 +15,7 @@ import { ProvenResults } from "@/components/theorie/ProvenResults";
 import { CreditWallDiagram } from "@/components/theorie/CreditWallDiagram";
 import { OrganismLoopDiagram } from "@/components/theorie/OrganismLoopDiagram";
 import { ReservoirMemoryDemo } from "@/components/theorie/ReservoirMemoryDemo";
+import { SigmaDemo } from "@/components/theorie/SigmaDemo";
 
 
 export default function TheoriePage() {
@@ -299,6 +300,7 @@ export default function TheoriePage() {
               pédagogique du ratio de branchement, non une mesure
               neurophysiologique exacte.
             </p>
+            <SigmaDemo theme={theme.canvas} />
           </Chapter>
 
           <Chapter
