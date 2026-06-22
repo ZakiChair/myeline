@@ -11,6 +11,8 @@ import { Chapter } from "@/components/theorie/Chapter";
 import { TheoryNav } from "@/components/theorie/TheoryNav";
 import { GlossaryTerm } from "@/components/theorie/Glossary";
 import { ACTES, sectionLaPlusVisible } from "@/lib/theory-nav";
+import { CreditWallDiagram } from "@/components/theorie/CreditWallDiagram";
+import { OrganismLoopDiagram } from "@/components/theorie/OrganismLoopDiagram";
 
 // Enveloppe légère pour les sections Acte V (correspondance, références) — conservées
 // telles quelles pour Task 11. Ne pas supprimer.
@@ -396,9 +398,210 @@ export default function TheoriePage() {
           </Chapter>
 
           {/* ═══════════════════════════════════════════════════════════
-              ACTES III–V — ancrages réservés (Tasks 10, 11)
-              Ne pas développer ici. Section est conservée pour Task 11.
+              ACTE III · Changer d'échelle
               ═══════════════════════════════════════════════════════════ */}
+
+          <Chapter
+            id="echelle"
+            eyebrow="l&apos;échelle · acte III"
+            title="Cent mille neurones — les mêmes règles"
+            enUnePhrase="Les mêmes règles, de mille à cent mille neurones, sur des tableaux typés et le GPU."
+          >
+            <p>
+              Passer d&apos;un village de mille neurones à une métropole de cent
+              mille ne change pas les règles — cela change le{" "}
+              <span style={{ color: "var(--a1)" }}>substrat de calcul</span>.
+              Les tableaux typés (<span className="font-mono">Int8Array</span>,{" "}
+              <span className="font-mono">Uint8Array</span>) remplacent les
+              objets JavaScript, et le GPU prend le relais pour la mise à jour
+              synchrone de l&apos;ensemble des neurones en un seul appel.
+            </p>
+            {/* Analogie : village → métropole */}
+            <p className="rounded-lg bg-white/[0.03] px-4 py-3 font-serif italic text-white/60">
+              Imaginez un village de mille habitants où le maire connaît
+              personnellement chacun — les décisions se prennent à la main, une
+              par une. Dans une métropole de cent mille, il faut des services
+              municipaux parallèles : chaque quartier traite ses habitants
+              simultanément, puis les résultats se consolident. Les règles du
+              vivre-ensemble n&apos;ont pas changé ; seul le mode d&apos;exécution
+              a évolué.
+            </p>
+            <p>
+              À grande échelle, les{" "}
+              <span style={{ color: "var(--a1)" }}>avalanches</span> gagnent en
+              richesse statistique et les résultats deviennent robustement
+              mesurables. C&apos;est à cette échelle que la{" "}
+              <GlossaryTerm termeId="stdp">STDP</GlossaryTerm> montre toute sa
+              puissance : dans nos expériences, elle rejoue une séquence à{" "}
+              <strong className="text-white/90">100 %</strong>, quand le Hebb
+              instantané plafonne à{" "}
+              <strong className="text-white/90">0 %</strong> — la démonstration
+              complète est détaillée en Acte V.
+            </p>
+          </Chapter>
+
+          {/* ═══════════════════════════════════════════════════════════
+              ACTE IV · Apprendre
+              ═══════════════════════════════════════════════════════════ */}
+
+          <Chapter
+            id="mur-credit"
+            eyebrow="le crédit · acte IV"
+            title="Le mur du crédit"
+            enUnePhrase="Créditer une action pour une récompense qui n'arrive que plusieurs instants plus tard est le vrai problème."
+          >
+            <p>
+              Supposez que vous dressiez un chien. Il exécute son tour à
+              l&apos;instant <span className="font-mono">t</span>, mais vous lui
+              tendez sa friandise dix secondes plus tard. Comment le chien
+              sait-il quelle action mérite la récompense ? S&apos;il a entre-temps
+              reniflé le sol, tourné en rond et bâillé, la friandise peut
+              renforcer n&apos;importe lequel de ces comportements.
+            </p>
+            {/* Analogie : chien récompensé trop tard */}
+            <p className="rounded-lg bg-white/[0.03] px-4 py-3 font-serif italic text-white/60">
+              C&apos;est le{" "}
+              <span style={{ color: "var(--a1)" }}>problème du crédit temporel</span>{" "}
+              : entre l&apos;action et la récompense, d&apos;autres événements se
+              produisent. Sans mécanisme pour « se souvenir » que quelque chose
+              de pertinent vient de se passer, le signal de renforcement arrive
+              trop tard pour être utile.
+            </p>
+            <p>
+              La solution biologique est la{" "}
+              <GlossaryTerm termeId="eligibilite">trace d&apos;éligibilité</GlossaryTerm>{" "}
+              : au moment de l&apos;action, une marque temporaire est déposée sur
+              la synapse. Elle décroît exponentiellement. Quand la récompense
+              arrive, elle ne renforce que les synapses encore marquées — celles
+              qui ont participé à l&apos;action récente, pas aux distractions
+              qui ont suivi.
+            </p>
+            <CreditWallDiagram theme={theme.canvas} />
+          </Chapter>
+
+          <Chapter
+            id="reservoir"
+            eyebrow="le réservoir · acte IV"
+            title="Un étang comme mémoire vivante"
+            enUnePhrase="Un réseau figé sert de mémoire vivante ; on n'apprend qu'à en lire l'activité."
+          >
+            <p>
+              Lancez un caillou dans un étang. Les rides se propagent, se
+              croisent, rebondissent sur les berges — et persistent plusieurs
+              secondes après l&apos;impact. L&apos;étang{" "}
+              <span style={{ color: "var(--a1)" }}>se souvient</span> du jet,
+              sans que rien en lui n&apos;ait été modifié de façon permanente.
+            </p>
+            {/* Analogie : étang / rides */}
+            <p className="rounded-lg bg-white/[0.03] px-4 py-3 font-serif italic text-white/60">
+              Un{" "}
+              <span style={{ color: "var(--a1)" }}>réservoir neuronal</span>{" "}
+              fonctionne de même : un réseau récurrent aux connexions{" "}
+              <strong className="text-white/85">figées</strong> est traversé par
+              un signal sensoriel. L&apos;activité qui s&apos;y déploie — riche,
+              haute-dimensionnelle — est une empreinte temporaire de ce signal.
+              Rien dans le réseau lui-même n&apos;est modifié ; seul un{" "}
+              <span style={{ color: "var(--a1)" }}>lecteur</span> linéaire placé
+              à la sortie apprend à lire cette empreinte.
+            </p>
+            <p>
+              C&apos;est l&apos;architecture du{" "}
+              <GlossaryTerm termeId="reservoir">réservoir</GlossaryTerm> (
+              <em>echo state network</em>) : la mémoire de travail tient dans
+              la dynamique du réseau figé ; l&apos;apprentissage se concentre
+              entièrement dans le lecteur, entraîné par{" "}
+              <GlossaryTerm termeId="reinforce">REINFORCE</GlossaryTerm> avec
+              des{" "}
+              <GlossaryTerm termeId="eligibilite">traces d&apos;éligibilité</GlossaryTerm>{" "}
+              (Hoerzer, Legenstein &amp; Maass, 2014).
+            </p>
+            <p>
+              Les résultats sont frappants : en mémoire de séquence, le
+              réservoir atteint{" "}
+              <strong className="text-white/90">0,93</strong> contre{" "}
+              <strong className="text-white/90">0,47</strong> sans lui ; en
+              crédit temporel, <strong className="text-white/90">0,96</strong>{" "}
+              contre <strong className="text-white/90">0,50</strong> — la
+              démonstration complète est détaillée en Acte V.
+            </p>
+          </Chapter>
+
+          <Chapter
+            id="creature"
+            eyebrow="la créature · acte IV"
+            title="La créature qui apprend"
+            enUnePhrase="Par récompense, la créature apprend quelle action paie — et un témoin prouve que c'est bien la contingence."
+          >
+            <p>
+              Dans la boîte de Skinner, un rat appuie sur un levier ; une
+              boulette de nourriture tombe. Très vite, le rat apprend à
+              actionner le levier. Mais est-ce la relation{" "}
+              <span style={{ color: "var(--a1)" }}>levier → nourriture</span>{" "}
+              qui enseigne, ou simplement l&apos;habitude d&apos;appuyer, ou le
+              rythme des boulettes ?
+            </p>
+            {/* Analogie : boîte de Skinner */}
+            <p className="rounded-lg bg-white/[0.03] px-4 py-3 font-serif italic text-white/60">
+              Pour isoler la{" "}
+              <span style={{ color: "var(--a1)" }}>contingence</span>, on
+              introduit un{" "}
+              <GlossaryTerm termeId="yoked">témoin yoked</GlossaryTerm> : un
+              second rat reçoit exactement le même calendrier de récompenses —
+              aux mêmes instants, dans les mêmes quantités — mais sans aucun
+              lien avec ses propres actions. Si le premier rat apprend et le
+              second non, c&apos;est bien la contingence action-récompense qui
+              est la cause, pas la récompense seule.
+            </p>
+            <p>
+              Dans Myéline, la créature simulée suit la même logique. Son{" "}
+              <span style={{ color: "var(--a1)" }}>ΔĀ</span> (amélioration
+              moyenne de l&apos;action par rapport à la ligne de base) atteint{" "}
+              <strong className="text-white/90">1,00</strong> — le témoin
+              yoked, lui, reste à{" "}
+              <strong className="text-white/90">0,00</strong>. La preuve est
+              que c&apos;est bien l&apos;apprentissage par contingence qui opère,
+              détaillée en Acte V.
+            </p>
+          </Chapter>
+
+          <Chapter
+            id="organisme"
+            eyebrow="l&apos;organisme · acte IV"
+            title="L'organisme incarné"
+            enUnePhrase="Sentir → réservoir → agir → récompense, en boucle : l'organisme apprend à se nourrir."
+          >
+            <p>
+              Un petit animal qui fourrage n&apos;est pas un algorithme flottant
+              dans l&apos;abstrait. Il{" "}
+              <span style={{ color: "var(--a1)" }}>perçoit</span> son
+              environnement via ses capteurs, fait transiter ce signal à travers
+              un réservoir récurrent, et traduit la lecture de ce réservoir en{" "}
+              <span style={{ color: "var(--a1)" }}>action motrice</span>. La
+              récompense — trouver de la nourriture — boucle en retour sur le
+              lecteur, l&apos;affinant pas à pas.
+            </p>
+            {/* Analogie : petit animal qui fourrage */}
+            <p className="rounded-lg bg-white/[0.03] px-4 py-3 font-serif italic text-white/60">
+              Imaginez un mulot dans un champ : il flaire, avance, tourne, et à
+              chaque grain trouvé, quelque chose se renforce dans son comportement.
+              Il n&apos;a pas de carte du champ ; il a une mémoire de travail
+              (le réservoir) et une politique apprise (le lecteur). La boucle
+              sentir–agir–récompense est ce qui fait de lui un{" "}
+              <em>organisme</em>, pas un automate.
+            </p>
+            <p>
+              Myéline simule exactement cette boucle. Le schéma ci-dessous la
+              rend explicite : les capteurs alimentent le réservoir figé, le
+              lecteur appris choisit l&apos;action, et la récompense revient
+              ajuster le lecteur.
+            </p>
+            <OrganismLoopDiagram theme={theme.canvas} />
+            <p className="mt-2 text-[13px] text-white/50">
+              Note : le corps (capteurs, moteur) et la démarche de fourrage sont
+              de la <em>scène codée</em> — pas du comportement appris. Seul le
+              lecteur évolue.
+            </p>
+          </Chapter>
 
           {/* === Acte V conservé pour Task 11 — ne pas supprimer === */}
           <Section eyebrow="la correspondance" title="Des curseurs à la biologie">
