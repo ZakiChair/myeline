@@ -17,6 +17,7 @@ import { OrganismLoopDiagram } from "@/components/theorie/OrganismLoopDiagram";
 import { ReservoirMemoryDemo } from "@/components/theorie/ReservoirMemoryDemo";
 import { SigmaDemo } from "@/components/theorie/SigmaDemo";
 import { LiveOrganism } from "@/components/theorie/LiveOrganism";
+import { MarginCompanion } from "@/components/theorie/MarginCompanion";
 
 
 export default function TheoriePage() {
@@ -61,6 +62,7 @@ export default function TheoriePage() {
       style={theme.vars as React.CSSProperties}
       className="myeline-bg min-h-screen text-white"
     >
+      <MarginCompanion theme={theme.canvas} />
       <div className="mx-auto flex max-w-5xl gap-10 px-6 py-10 sm:py-16">
         <TheoryNav activeId={activeId} progress={progress} />
 
