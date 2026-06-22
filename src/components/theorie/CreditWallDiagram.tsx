@@ -89,6 +89,7 @@ export function CreditWallDiagram({ theme }: { theme: ThemeCanvas }): React.JSX.
           cy={TOKEN_Y}
           r="7"
           fill={theme.excitedCore}
+          style={{ transformBox: "fill-box", transformOrigin: "50% 50%" }}
           initial={{ opacity: 0, scale: 0 }}
           animate={{
             opacity: [0, 1, 1, 0.3],
@@ -109,6 +110,7 @@ export function CreditWallDiagram({ theme }: { theme: ThemeCanvas }): React.JSX.
           cy={TOKEN_Y}
           r="8"
           fill={theme.event}
+          style={{ transformBox: "fill-box", transformOrigin: "50% 50%" }}
           initial={{ opacity: 0, scale: 0 }}
           animate={{
             opacity: [0, 0, 0, 1],
@@ -165,7 +167,7 @@ export function CreditWallDiagram({ theme }: { theme: ThemeCanvas }): React.JSX.
 
       <figcaption className="mt-2 text-center font-mono text-[11px] text-white/40">
         l&apos;action (clair) laisse une trace d&apos;éligibilité qui décline ; quand la récompense
-        (coloré) arrive en t+4, la trace encore présente crédite l&apos;action.
+        (colorée) arrive en t+4, la trace encore présente crédite l&apos;action.
       </figcaption>
     </figure>
   );
