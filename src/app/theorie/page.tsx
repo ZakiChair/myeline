@@ -608,7 +608,7 @@ export default function TheoriePage() {
             id="correspondance"
             eyebrow="la correspondance · acte V"
             title="Des curseurs à la biologie"
-            enUnePhrase="Chaque réglage de l'interface a un sens neuroscientifique précis."
+            enUnePhrase="Les curseurs de la simulation ne sont pas abstraits : chacun reproduit un mécanisme réel du cerveau."
           >
             <p>Chaque réglage de l&apos;interface a un sens neuroscientifique :</p>
             <div className="overflow-hidden rounded-xl border border-white/[0.08]">
