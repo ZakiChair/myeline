@@ -94,8 +94,8 @@ export default function TheoriePage() {
             </h1>
             <p className="mt-6 max-w-2xl font-serif text-lg leading-relaxed text-white/75 sm:text-xl">
               Le cerveau n&apos;est pas un circuit figé. C&apos;est un{" "}
-              <span style={{ color: "var(--a1)" }}>milieu excitable</span> qui
-              se câble lui-même : l&apos;activité y façonne la matière, et la
+              <span style={{ color: "var(--a1)" }}>milieu excitable</span>{" "}
+              qui se câble lui-même : l&apos;activité y façonne la matière, et la
               matière y propage l&apos;activité. Myéline simule cette double
               boucle — et la maintient là où le vivant opère le mieux, à la
               frontière entre le silence et la tempête.
@@ -126,7 +126,7 @@ export default function TheoriePage() {
             enUnePhrase="Des règles locales simples sur un graphe qui se recâble suffisent à engendrer une complexité sans fin."
           >
             <p>
-              Le <span style={{ color: "var(--a1)" }}>Jeu de la Vie</span> de
+              Le <span style={{ color: "var(--a1)" }}>Jeu de la Vie</span>{" "}de
               Conway (1970) a montré qu&apos;une poignée de règles locales sur
               une grille suffit à engendrer une complexité sans fin. Myéline
               déplace ces règles d&apos;une grille rigide vers un{" "}
@@ -205,7 +205,7 @@ export default function TheoriePage() {
               — des itérations, notées{" "}
               <span className="font-mono">t</span>. À chaque pas, tous les
               neurones décident{" "}
-              <span style={{ color: "var(--a1)" }}>simultanément</span> de leur
+              <span style={{ color: "var(--a1)" }}>simultanément</span>{" "}de leur
               prochain état, à partir d&apos;une photographie du réseau prise
               au début de l&apos;itération. Personne ne joue avant l&apos;autre
               : la mise à jour est synchrone, comme dans le Jeu de la Vie.
@@ -331,7 +331,7 @@ export default function TheoriePage() {
             </p>
             <p>
               De là, deux forces sculptent le graphe : la{" "}
-              <span style={{ color: "var(--a1)" }}>synaptogenèse</span> tisse
+              <span style={{ color: "var(--a1)" }}>synaptogenèse</span>{" "}tisse
               de nouvelles liaisons entre voisins corrélés, et
               l&apos;<span style={{ color: "var(--a1)" }}>élagage</span> retire
               les synapses muettes —{" "}
@@ -349,7 +349,7 @@ export default function TheoriePage() {
             <p>
               Le cerveau en formation n&apos;attend pas le monde : il génère sa
               propre activité. Les{" "}
-              <span style={{ color: "var(--a1)" }}>vagues spontanées</span> de
+              <span style={{ color: "var(--a1)" }}>vagues spontanées</span>{" "}de
               la rétine, avant même l&apos;ouverture des yeux, organisent le
               câblage visuel. C&apos;est le rôle de l&apos;étincelle spontanée
               dans Myéline — semer des avalanches qui guident la croissance.
@@ -405,7 +405,7 @@ export default function TheoriePage() {
             </p>
             <p>
               À grande échelle, les{" "}
-              <span style={{ color: "var(--a1)" }}>avalanches</span> gagnent en
+              <span style={{ color: "var(--a1)" }}>avalanches</span>{" "}gagnent en
               richesse statistique et les résultats deviennent robustement
               mesurables. C&apos;est à cette échelle que la{" "}
               <GlossaryTerm termeId="stdp">STDP</GlossaryTerm> montre toute sa
@@ -466,7 +466,7 @@ export default function TheoriePage() {
               Lancez un caillou dans un étang. Les rides se propagent, se
               croisent, rebondissent sur les berges — et persistent plusieurs
               secondes après l&apos;impact. L&apos;étang{" "}
-              <span style={{ color: "var(--a1)" }}>se souvient</span> du jet,
+              <span style={{ color: "var(--a1)" }}>se souvient</span>{" "}du jet,
               sans que rien en lui n&apos;ait été modifié de façon permanente.
             </p>
             {/* Analogie : étang / rides */}
@@ -474,7 +474,7 @@ export default function TheoriePage() {
               Un{" "}
               <span style={{ color: "var(--a1)" }}>réservoir neuronal</span>{" "}
               fonctionne de même : un réseau récurrent aux connexions{" "}
-              <strong className="text-white/85">figées</strong> est traversé par
+              <strong className="text-white/85">figées</strong>{" "}est traversé par
               un signal sensoriel. L&apos;activité qui s&apos;y déploie — riche,
               haute-dimensionnelle — est une empreinte temporaire de ce signal.
               Rien dans le réseau lui-même n&apos;est modifié ; seul un{" "}

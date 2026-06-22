@@ -99,7 +99,10 @@ export function OrganismLoopDiagram({ theme }: { theme: ThemeCanvas }): React.JS
         {/* Jeton qui circule le long de la boucle */}
         <motion.circle
           r="4"
+          cx={30}
+          cy={50}
           fill={theme.excitedCore}
+          initial={{ cx: 30, cy: 50 }}
           animate={{ cx: [30, 130, 230, 330], cy: [50, 50, 50, 50] }}
           transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
         />
@@ -118,7 +121,7 @@ export function OrganismLoopDiagram({ theme }: { theme: ThemeCanvas }): React.JS
           À ce stade ·{" "}
         </span>
         dans cette tâche la vue est <strong className="text-white/85">continue</strong> : on prouve
-        que la politique apprend, pas que le réservoir est <em>nécessaire</em> au fourrage. Rendre
+        que la politique apprend, pas que le réservoir est <em>nécessaire</em>{" "}au fourrage. Rendre
         la vue intermittente (le repère clignote) forcerait la mémoire — c&apos;est l&apos;étape
         qui reste ouverte.
       </p>
