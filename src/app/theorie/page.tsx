@@ -14,6 +14,7 @@ import { ACTES, sectionLaPlusVisible } from "@/lib/theory-nav";
 import { ProvenResults } from "@/components/theorie/ProvenResults";
 import { CreditWallDiagram } from "@/components/theorie/CreditWallDiagram";
 import { OrganismLoopDiagram } from "@/components/theorie/OrganismLoopDiagram";
+import { ReservoirMemoryDemo } from "@/components/theorie/ReservoirMemoryDemo";
 
 
 export default function TheoriePage() {
@@ -496,6 +497,12 @@ export default function TheoriePage() {
               crédit temporel, <strong className="text-white/90">0,96</strong>{" "}
               contre <strong className="text-white/90">0,50</strong> — la
               démonstration complète est détaillée en Acte V.
+            </p>
+            {/* Démo illustrative — mémoire du réservoir */}
+            <ReservoirMemoryDemo theme={theme.canvas} />
+            <p className="text-center font-mono text-[11px] text-white/40">
+              démo illustrative · on flashe un signal, puis plus rien : l&apos;écho
+              persiste — c&apos;est la mémoire du réservoir
             </p>
           </Chapter>
 
