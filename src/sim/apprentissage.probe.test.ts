@@ -31,6 +31,7 @@ export function experience(n: number, seed: number, ticks: number, options: Orga
     },
     options,
   );
+  const wInitial = Float32Array.from(org.brain.topo.w);
   const rng = mulberry32(seed * 7919);
   const parTranche: Tranche[] = [];
   let refVies = 0;
@@ -51,7 +52,30 @@ export function experience(n: number, seed: number, ticks: number, options: Orga
     refToxin = org.metrics.ateToxin;
   }
   const { first, second } = splitHalves(org.metrics.lifetimes);
-  return { org, parTranche, first, second, resume: summarize(org.metrics) };
+  // Dérive des poids : les synapses bougent-elles vraiment, ou saturent-elles aux bornes ?
+  let sommeDelta = 0;
+  let aZero = 0;
+  let auPlafond = 0;
+  const w = org.brain.topo.w;
+  for (let e = 0; e < w.length; e++) {
+    if (wInitial[e] === 0) continue;
+    sommeDelta += Math.abs(w[e] - wInitial[e]);
+    if (wInitial[e] > 0) {
+      if (w[e] <= 0) aZero++;
+      else if (w[e] >= org.brain.params.plasticity.wMax - 1e-6) auPlafond++;
+    }
+  }
+  const excitatrices = wInitial.reduce((n, v) => n + (v > 0 ? 1 : 0), 0);
+  return {
+    org,
+    parTranche,
+    first,
+    second,
+    resume: summarize(org.metrics),
+    deltaW: sommeDelta / Math.max(1, excitatrices),
+    partAZero: aZero / Math.max(1, excitatrices),
+    partAuPlafond: auPlafond / Math.max(1, excitatrices),
+  };
 }
 
 /** Ratio toxine/(toxine+nourriture) sur un groupe de tranches. NaN si rien n'a été mangé. */
@@ -61,15 +85,18 @@ export function ratioToxine(ts: Tranche[]): number {
   return tot > 0 ? tox / tot : NaN;
 }
 
-function journaliser(nom: string, r: ReturnType<typeof experience>) {
+function journaliser(nom: string, r: ReturnType<typeof experience>, detail = true) {
   // eslint-disable-next-line no-console
   console.log(
     `${nom} vies=${r.org.metrics.lifetimes.length} ` +
       `médiane 1re moitié=${median(r.first).toFixed(1)} 2e moitié=${median(r.second).toFixed(1)} ` +
       `ratio toxine début=${ratioToxine(r.parTranche.slice(0, 2)).toFixed(3)} ` +
       `fin=${ratioToxine(r.parTranche.slice(-2)).toFixed(3)} ` +
-      `énergie moy=${r.resume.energyMean.toFixed(1)}`,
+      `énergie moy=${r.resume.energyMean.toFixed(1)} ` +
+      `|Δw| moyen=${r.deltaW.toFixed(5)} à zéro=${(100 * r.partAZero).toFixed(1)} % ` +
+      `au plafond=${(100 * r.partAuPlafond).toFixed(1)} %`,
   );
+  if (!detail) return;
   for (const [i, t] of r.parTranche.entries()) {
     // eslint-disable-next-line no-console
     console.log(
@@ -87,11 +114,15 @@ describe("apprentissage (banc de mesure)", () => {
   // Ce fichier n'affirme donc AUCUN apprentissage. Il vérifie ce qui est effectivement
   // établi — la boucle vit, meurt, mange et reste reproductible — et sert de banc de
   // référence à qui reprendra le crédit temporel.
-  it("journalise la progression sur plusieurs graines", () => {
+  it("compare l'organisme plastique à son témoin GELÉ (lr = 0)", () => {
+    // Sans ce témoin, un écart entre moitiés ne prouve rien : les médianes pourraient dériver
+    // de la même façon SANS plasticité, sous l'effet du monde seul. C'est ce témoin qui
+    // décide si « n'apprend pas » est une conclusion ou une observation non contrôlée.
     for (const seed of [1, 2, 3]) {
-      journaliser(`graine=${seed}`, experience(2500, seed, 400_000));
+      journaliser(`[plastique] graine=${seed}`, experience(2500, seed, 400_000), false);
+      journaliser(`[gelé]      graine=${seed}`, experience(2500, seed, 400_000, { lr: 0 }), false);
     }
-    expect(true).toBe(true); // banc de mesure, sans assertion d'apprentissage
+    expect(true).toBe(true); // banc de mesure
   }, 1_800_000);
 
   it("produit une expérience exploitable : des vies closes et des rencontres des deux sortes", () => {

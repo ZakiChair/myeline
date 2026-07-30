@@ -231,36 +231,73 @@ Deux décisions en découlent :
 
 Pour la tâche 9 : à n = 2 500, une expérience de 400 000 ticks prend environ 53 s par graine.
 
-## Tâche 9 — apprentissage : RÉSULTAT NÉGATIF (2026-07-30)
+## Tâche 9 — apprentissage : signal faible, non concluant (2026-07-30)
 
-**L'organisme n'apprend pas de façon démontrable.** Le lot 1 livre un noyau qui vit, décide,
-mange, meurt et se mesure — mais la porte d'apprentissage n'est **pas** franchie. Ce qui suit
-est la mesure, pas une excuse.
+**Verdict : une amélioration faible de la durée de vie apparaît avec la plasticité et est
+absente du témoin gelé — mais elle n'est pas monotone et ne se lit pas dans le ratio toxine.**
+La porte du lot 1 n'est donc **pas** franchie : il y a un signal, pas une démonstration.
 
-### La mesure
+### Le témoin gelé était indispensable
 
-400 000 ticks, n = 2 500, trois graines, huit tranches d'expérience :
+Une première rédaction de cette note concluait à un résultat purement négatif, en comparant
+seulement le début et la fin d'expérience d'un organisme plastique. C'était une observation
+**non contrôlée** : rien ne disait que les médianes ne dérivaient pas de la même façon sans
+plasticité, sous le seul effet du monde. Le témoin `lr = 0` (nominalement protocole 2, lot 3)
+a donc été lancé ici, parce qu'il est ce qui donne un sens à la conclusion.
 
-| graine | vies | médiane 1re moitié | 2e moitié | ratio toxine début → fin |
-|---|---|---|---|---|
-| 1 | 621 | 451 | 574 (×1,27) | 0,303 → 0,277 |
-| 2 | 822 | 381 | 391 (×1,03) | 0,491 → 0,526 |
-| 3 | 744 | 387 | 468 (×1,21) | 0,377 → 0,386 |
+400 000 ticks, n = 2 500, huit tranches, médiane des durées de vie par moitié d'expérience :
 
-Médianes par tranche, graine 1 : 378, 414, 526, 576, 456, **786**, 317, 814. La dispersion
-inter-tranches est du même ordre que l'écart entre moitiés, et la graine 2 est parfaitement
-plate. Le ratio toxine ne baisse sur aucune graine de façon nette — il *monte* sur la graine 2.
+| graine | plastique | gelé (`lr = 0`) |
+|---|---|---|
+| 1 | 451 → 574 (**×1,27**) | 509 → 449 (×0,88) |
+| 2 | 381 → 391 (×1,03) | 412 → 367 (×0,89) |
+| 3 | 387 → 468 (**×1,21**) | 376 → 441 (×1,17) |
+| moyenne | **×1,17** | ×0,98 |
 
-Un écart entre deux moitiés sur deux graines sur trois, sans monotonie par tranche et sans
-signal sur le ratio toxine, ne se distingue pas du hasard. Écrire une assertion `×1,2` ici
-produirait un test qui passe pour de mauvaises raisons.
+Ratio toxine, début → fin :
 
-### Trois hypothèses testées, aucune concluante
+| graine | plastique | gelé |
+|---|---|---|
+| 1 | 0,303 → 0,277 (baisse) | 0,288 → 0,325 (monte) |
+| 2 | 0,491 → 0,526 (monte) | 0,472 → 0,559 (monte) |
+| 3 | 0,377 → 0,386 (plat) | 0,315 → 0,405 (monte) |
+
+Le réseau gelé voit son ratio toxine monter sur **3 graines sur 3** ; le plastique sur une
+seule. La direction est cohérente, l'amplitude ne l'est pas.
+
+Ce n'est pas une preuve : trois graines, une dispersion inter-tranches du même ordre que
+l'effet (graine 1 : 378, 414, 526, 576, 456, **786**, 317, 814), et la graine 2 plate. Mais
+ce n'est pas rien non plus, et l'affirmer comme « aucun apprentissage » aurait été aussi faux
+que de l'affirmer comme « l'organisme apprend ».
+
+### Le diagnostic principal : l'homéostasie écrase l'apprentissage
+
+La dérive moyenne des poids excitateurs, |Δw| par synapse sur 400 000 ticks :
+
+| graine | plastique | gelé (`lr = 0`) | part imputable à l'apprentissage |
+|---|---|---|---|
+| 1 | 0,0527 | 0,0493 | 6,5 % |
+| 2 | 0,0516 | 0,0494 | 4,3 % |
+| 3 | 0,0526 | 0,0506 | 3,8 % |
+
+**Le témoin « gelé » n'est pas gelé** : l'homéostasie n'est pas conditionnée par `lr` et
+continue de mettre les poids à l'échelle. Elle produit donc **~93 % à 96 % du mouvement des
+synapses**, et la règle à trois facteurs ne pèse que les quelques pour cent restants. Aucun
+poids n'est saturé (0 % à zéro, 0 % au plafond) : la règle n'est pas dégénérée, elle est
+simplement inaudible sous la régulation de stabilité.
+
+C'est l'explication la mieux étayée du signal faible, et elle est plus concrète que les
+hypothèses ci-dessous. Pistes pour le lot 3 : ralentir l'homéostasie (`homeoRate`,
+`homeoEvery`), l'appliquer à une moyenne de poids par neurone plutôt qu'arête par arête, ou
+augmenter `lr` — en revérifiant à chaque fois la porte de calibration, qui existe justement
+pour attraper la crise que ces réglages peuvent provoquer.
+
+### Trois autres hypothèses testées
 
 **1. La dopamine tonique noie le signal phasique.** `da = r − rBar` est émis à *chaque* tick ;
 entre deux récompenses `r = 0`, donc `da = −rBar` en permanence, soit ≈ −0,03 par déversement
-appliqué à toute l'éligibilité. Cumulé, c'est du même ordre que le signal utile, 30× plus fort
-mais 25× plus rare. Testé via la couture `dopamineSource`, **sans modifier le noyau** :
+appliqué à toute l'éligibilité. Testé via la couture `dopamineSource`, **sans modifier le
+noyau** :
 
 | régime | graine 1 | graine 2 |
 |---|---|---|
@@ -268,46 +305,46 @@ mais 25× plus rare. Testé via la couture `dopamineSource`, **sans modifier le 
 | phasique `r − rBar` | 575 → 695 | 371 → 371 |
 | phasique `r` brut | 715 → **596** | 406 → 367 |
 
-Aucun régime ne dégage de progression ; le phasique brut *descend* sur la graine 1.
+Aucun régime ne se détache ; le phasique brut *descend* sur la graine 1.
 
-**2. La fenêtre de crédit est trop courte.** Écartée par le calcul : la décision qui mène à
-une ingestion précède celle-ci d'au plus l'intervalle entre décisions, mesuré à ~20 ticks,
-alors que `tauElig` vaut 60. Le crédit a matériellement le temps d'arriver.
+**2. La fenêtre de crédit est trop courte.** *Partiellement* écartée. La décision terminale
+qui mène à l'ingestion la précède d'environ 20 ticks, largement dans `tauElig = 60`. Mais
+**l'approche** — la suite de virages qui a orienté l'organisme vers la pastille — s'étend sur
+plusieurs décisions, soit 60 à 100 ticks et plus : seul le dernier « continue » est crédité,
+pas la manœuvre qui l'a rendu possible. Ce n'est pas une raison d'allonger `tauElig` à
+l'aveugle, mais la fenêtre ne couvre pas toute la chaîne causale.
 
-**3. Il manque une copie d'efférence.** C'est l'hypothèse la plus solide. Les quatre pools
-moteurs déchargent à des taux voisins (~0,012) : **rien dans l'activité du réseau ne distingue
-le pool qui a gagné la course de ses trois concurrents**. La règle à trois facteurs crédite
-donc les quatre uniformément, et aucune action ne peut être renforcée préférentiellement.
+**3. Il manque une copie d'efférence.** Les quatre pools moteurs déchargent à des taux voisins
+(~0,012) : rien dans l'activité du réseau ne distingue le pool qui a gagné la course de ses
+trois concurrents, donc le crédit se répartit uniformément.
 
 Implémentation testée — une bouffée injectée dans le pool gagnant au franchissement — et
-**rejetée** : elle relance immédiatement ce pool, qui refranchit le seuil au tick suivant. La
-décision se verrouille sur elle-même, l'organisme cesse de se déplacer (vie médiane 1201, soit
-exactement le métabolisme de repos) et ne mange plus rien (`ratio toxine = NaN`). Le mécanisme
-a été retiré du code plutôt que laissé désactivé.
+**rejetée** : elle relance ce pool, qui refranchit le seuil au tick suivant. La décision se
+verrouille sur elle-même, l'organisme cesse de se déplacer (vie médiane 1201, soit exactement
+le métabolisme de repos) et ne mange plus rien. Le mécanisme a été retiré du code plutôt que
+laissé désactivé. Une version viable devrait marquer le pool gagnant **sans** réalimenter son
+accumulateur — trace de plasticité dédiée, ou période réfractaire de décision.
 
-Une copie d'efférence viable devrait marquer le pool gagnant **sans** réalimenter son
-accumulateur — par exemple une trace de plasticité dédiée plutôt qu'un courant, ou une période
-réfractaire de décision après chaque franchissement.
+### Ce que le lot 1 établit
 
-### Ce que le lot 1 établit malgré tout
-
-Le fichier `apprentissage.probe.test.ts` n'affirme aucun apprentissage. Il vérifie ce qui est
-réellement acquis, et c'est ce qui rend le résultat négatif interprétable :
+`apprentissage.probe.test.ts` n'affirme aucun apprentissage — l'effet est trop faible pour
+qu'une assertion sur trois graines soit autre chose qu'un test instable. Il vérifie ce qui est
+réellement acquis, et c'est ce qui rend le résultat interprétable :
 
 - l'expérience a de la matière (> 30 morts, > 20 nourritures, > 5 toxines sur 100 000 ticks,
-  et les deux moitiés contiennent chacune assez de vies pour être comparées) ;
-- elle est reproductible au bit près pour une graine donnée.
+  et chaque moitié contient assez de vies pour être comparée) ;
+- elle est reproductible au bit près pour une graine donnée ;
+- le banc plastique/gelé est en place et rejouable.
 
-Sans ces garanties, on ne saurait pas distinguer « l'organisme n'apprend pas » de « l'organisme
-n'a rien vécu ». C'est la différence entre un résultat négatif et une absence de résultat.
+Sans ces garanties, on ne saurait pas distinguer « n'apprend pas » de « n'a rien vécu ».
 
 ### Suite
 
-Ce projet a déjà documenté un mur du crédit plutôt que de le maquiller ; la même exigence
-s'applique ici. Le lot 2 (worker et rendu) peut démarrer sur ce noyau — il rendra visible un
-organisme qui vit sans encore apprendre. Le lot 3 devra commencer par le crédit d'action, et
-son protocole *yoked* prend d'ailleurs tout son sens : il distinguera « apprendre » de
-« recevoir du signal » sur un système dont on sait déjà qu'il reçoit du signal sans apprendre.
+Le lot 2 (worker et rendu) peut démarrer sur ce noyau : il rendra visible un organisme qui vit
+et décide, sans encore apprendre de façon démontrable. Le lot 3 devrait commencer par le
+rapport de force entre homéostasie et apprentissage, avant même les témoins — et son protocole
+*yoked* garde tout son sens : il distinguera « apprendre » de « recevoir du signal » sur un
+système dont on sait déjà qu'il reçoit du signal sans en tirer grand-chose.
 
 ### Question ouverte à vérifier au lot 2
 
