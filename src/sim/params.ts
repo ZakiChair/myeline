@@ -69,6 +69,13 @@ export interface TopologyParams {
   /** Délai axonal maximal, en ticks (>= 1). */
   delayMax: number;
   wExc: number;
+  /**
+   * Poids des afférences capteur → cortex. DISTINCT de wExc : peu nombreuses, elles doivent
+   * être fortes pour imposer le signal à un cortex dominé par sa récurrence inhibitrice —
+   * comme les afférences thalamo-corticales. À wExc, la mesure montre que le cortex ignore
+   * ses capteurs (moyenne 0,0104 → 0,0111 pour une entrée multipliée par 15).
+   */
+  wSensory: number;
   /** Valeur POSITIVE ; le signe négatif est appliqué à la construction. */
   wInh: number;
   /** Borne supérieure du module d'un poids. */
@@ -86,8 +93,9 @@ export const TOPOLOGIE_DEFAUT: TopologyParams = {
   fracInh: 0.2,
   delayMax: 8,
   wExc: 0.09,
+  wSensory: 0.4,
   wInh: 1.4,
-  wMax: 1.5,
+  wMax: 3.0,
 };
 
 // ─── Neurone LIF ────────────────────────────────────────────────────────────────────────

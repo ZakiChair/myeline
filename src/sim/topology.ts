@@ -245,12 +245,14 @@ export function buildTopology(p: TopologyParams): Topology {
   const outDelay = new Uint8Array(e);
   const w = new Float32Array(e);
   const cursor = outOffsets.slice(0, n);
-  const ecrire = (src: number, cible: number) => {
+  const ecrire = (src: number, cible: number, poids: number) => {
     const k = cursor[src]++;
     outTarget[k] = cible;
     outDelay[k] = randInt(rng, 1, p.delayMax);
-    w[k] = sign[src] === 1 ? p.wExc : -p.wInh;
+    w[k] = poids;
   };
+  /** Poids d'une arête récurrente : le signe de la source, jamais celui de la cible (Dale). */
+  const poidsRecurrent = (src: number) => (sign[src] === 1 ? p.wExc : -p.wInh);
 
   for (let ri = 0; ri < regions.length; ri++) {
     const r = regions[ri];
@@ -259,7 +261,9 @@ export function buildTopology(p: TopologyParams): Topology {
       const i = r.start + k;
       const pool = Math.floor(k / r.poolSize);
       const [cx, cy, cz] = centrePool(ri, pool, r.pools, l);
-      for (let q = 0; q < p.kSensory; q++) ecrire(i, cibleCorticale(cx, cy, cz, p.sigmaExc));
+      for (let q = 0; q < p.kSensory; q++) {
+        ecrire(i, cibleCorticale(cx, cy, cz, p.sigmaExc), p.wSensory);
+      }
     }
   }
   for (let k = 0; k < nCortex; k++) {
@@ -268,10 +272,15 @@ export function buildTopology(p: TopologyParams): Topology {
     const cy = Math.floor(k / l) % l;
     const cz = Math.floor(k / (l * l));
     const sigma = sign[i] === 1 ? p.sigmaExc : p.sigmaInh;
-    for (let q = 0; q < p.kCortex; q++) ecrire(i, cibleHorsSoi(i, cx, cy, cz, sigma));
+    for (let q = 0; q < p.kCortex; q++) {
+      ecrire(i, cibleHorsSoi(i, cx, cy, cz, sigma), poidsRecurrent(i));
+    }
   }
   for (let j = 0; j < mot.count; j++) {
-    for (let k = 0; k < p.kMotorIn; k++) ecrire(motorSrc[j * p.kMotorIn + k], mot.start + j);
+    for (let k = 0; k < p.kMotorIn; k++) {
+      const src = motorSrc[j * p.kMotorIn + k];
+      ecrire(src, mot.start + j, poidsRecurrent(src));
+    }
   }
 
   // ── CSR entrant, par comptage.

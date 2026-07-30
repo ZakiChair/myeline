@@ -76,3 +76,45 @@ dernière propriété, absente du réseau de départ, qui rend les capteurs capa
 Bornes de la porte (`calibration.probe.test.ts`) : extinction si le taux tombe sous
 `0,4 × TAUX_CIBLE`, emballement au-dessus de `2,5 × TAUX_CIBLE`, dérive tolérée jusqu'à
 `0,25 × TAUX_CIBLE` (soit ~4× la dérive observée).
+
+### Le régime sous entrée SENSORIELLE, qui est le régime réel
+
+La calibration ci-dessus injecte un courant uniforme sur un neurone cortical sur 17. Ce n'est
+pas le chemin qu'empruntera l'organisme : ses capteurs projettent dans des **territoires
+localisés** (ballons gaussiens de rayon `sigmaExc` autour d'ancres de région). Une moyenne
+globale ne verrait ni un emballement local, ni — c'est ce qui s'est produit — une absence
+totale de réponse.
+
+Mesure faite en injectant dans trois secteurs voisins d'`OLF_FOOD` (le territoire cortical
+visé compte 218 neurones à n = 3 000) :
+
+| `wSensory` | territoire au repos | territoire à gain 0,2 | contraste | reste du cortex | neurones chauds à gain 0,6 |
+|---|---|---|---|---|---|
+| 0,09 (= `wExc`) | 0,0091 | 0,0148 | ×1,6 | 0,0103 | 0 |
+| **0,4** | **0,0088** | **0,0320** | **×3,6** | **0,0114** | **1** |
+| 1,0 | 0,0093 | 0,0600 | ×6,5 | 0,0123 | 29 |
+| 2,0 | 0,0087 | 0,0956 | ×11 | 0,0132 | 106 |
+
+À `wSensory = wExc`, **le cortex ignorait ses capteurs** : un neurone cortical du territoire
+ne reçoit qu'environ 1,7 afférence sensorielle (288 arêtes réparties sur ~168 sites du
+ballon), à un poids identique à celui des synapses récurrentes, face à une inhibition 15×
+plus forte. Le comportement n'aurait alors pas pu être causé par la perception.
+
+D'où l'introduction de **`wSensory = 0,4`**, distinct de `wExc` : peu d'afférences, mais
+fortes, comme les projections thalamo-corticales. Le contraste ×3,6 s'accompagne d'une
+**gradation monotone** de l'intensité (0,0205 / 0,0320 / 0,0414 pour des gains 0,05 / 0,2 /
+0,6) — l'organisme peut donc distinguer « proche » de « loin », pas seulement « présent » de
+« absent ». Au-delà de 1,0, des neurones chauds apparaissent : on paierait le contraste par
+une saturation locale.
+
+Un neurone est dit « chaud » quand son taux dépasse 0,15, soit 60 % du plafond imposé par le
+réfractaire (1/(refrac+1) = 0,25).
+
+### Question ouverte à vérifier au lot 2
+
+L'équilibre excitation/inhibition repose désormais surtout sur l'**amplitude** des poids
+(`wInh` = 15 × `wExc`) et non sur le profil spatial « mexican hat » (`sigmaInh` = 2 ×
+`sigmaExc`). La conception annonçait des ondes voyageuses et des avalanches obtenues
+« gratuitement » par ce profil ; un équilibre dominé par l'amplitude pourrait ne pas les
+produire. À constater à l'œil au lot 2 — et à corriger alors en rééquilibrant vers le profil
+spatial, pas à supposer acquis.
