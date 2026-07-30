@@ -354,3 +354,112 @@ L'équilibre excitation/inhibition repose désormais surtout sur l'**amplitude**
 « gratuitement » par ce profil ; un équilibre dominé par l'amplitude pourrait ne pas les
 produire. À constater à l'œil au lot 2 — et à corriger alors en rééquilibrant vers le profil
 spatial, pas à supposer acquis.
+
+---
+
+## Lot 0 — recalibration après changement d'horloge, de bruit et de géométrie (2026-07-30)
+
+Les tâches 2 à 4 changent toutes la dynamique : géométrie du monde sans transcendantes, bruit
+gaussien par table (un appel RNG au lieu de deux), `tauElig` porté de 60 à 2 500 ticks. Toutes
+les constantes calibrées ci-dessus avaient été réglées contre l'ANCIENNE dynamique. Elles
+devaient donc **repasser la porte**, pas être supposées valides.
+
+### Les quatre portes du lot
+
+| Porte | Vérification | Seuil | Mesuré | Verdict |
+|---|---|---|---|---|
+| (a) Régime | `calibration.probe.test.ts` | PASS, bornes inchangées | 6/6, bornes inchangées | ✅ |
+| (b) Débit | banc `stepLif`, n = 50 000 | > 1 200 ticks/s | **1 523 ticks/s** | ✅ |
+| (c) Témoin gelé | `organism.test.ts -t "gelé-total"` | 0 poids déplacé | 0 arête, dérive 0,000000 | ✅ |
+| (d) Portabilité | `tools/porte-portabilite.mjs` | empreintes identiques V8/JSC | identiques | ✅ |
+
+Débit : **534 → 1 523 ticks/s, soit ×2,85**, conforme au ×2,55 mesuré en isolation sur la table
+de bruit.
+
+Portabilité, n = 2500, graine 7 — l'outil commité tourne 20 000 ticks, mais **la mesure qui
+porte la conclusion est celle à 150 000**, huit fois au-delà du point de divergence historique
+(tick ≈ 17 942) :
+
+| ticks | Node (V8) | Bun (JSC) |
+|---|---|---|
+| 20 000 | `5b54fbdc:25/23/19/33` | `5b54fbdc:25/23/19/33` |
+| **150 000** | **`89bf8248:179/150/180/252`** | **`89bf8248:179/150/180/252`** |
+
+### Aucune constante de régime n'a bougé — et ce n'est pas de la chance
+
+| constante | inscrite | remesurée | écart |
+|---|---|---|---|
+| `TAUX_CIBLE` | 0,022 | 0,021864 | −0,6 % |
+| `TAUX_SPONTANE` | 0,009 | 0,008907 | −1,0 % |
+
+Ces deux taux se mesurent sur **`stepLif` seul**, où n'interviennent ni la géométrie du monde,
+ni `tauElig`, ni la plasticité. Ils ne POUVAIENT donc pas bouger, et le bruit par table conserve
+la distribution qu'il remplace. Le résultat vert est structurel, pas fortuit — sans cette
+raison, un lecteur ultérieur conclurait qu'on n'a pas regardé.
+
+### `TAUX_HOMEO` : écart assumé à l'étape 3 du plan, et deux erreurs de mesure à retenir
+
+Le plan demandait d'ajuster `TAUX_HOMEO` à la valeur mesurée. **Ce n'est pas fait, et c'est
+délibéré.** Une consigne posée égale à la valeur observée n'est plus un régulateur : c'est une
+tautologie avec un nom de variable. Le journal du lot 1 l'a déjà fait une fois — la ligne
+« `TAUX_HOMEO` : 0,012 → 0,0146, le taux cortical réellement vécu » est le défaut, pas la
+valeur 0,0146. Le répéter au lot 0 aurait engagé une course sans fin.
+
+La mesure juste, homéostasie active, n = 12 000, 20 000 ticks, 3 graines — **taux PAR NEURONE
+cortical**, la grandeur que `homeostasis()` régule réellement :
+
+| graine | médiane | Q1 | Q3 | p99 | moyenne | à ±20 % de la consigne |
+|---|---|---|---|---|---|---|
+| 1 | 0,014850 | 0,012250 | 0,018300 | 0,040350 | 0,016081 | 50,2 % |
+| 2 | 0,014700 | 0,012100 | 0,018050 | 0,036350 | 0,015743 | 50,9 % |
+| 3 | 0,014800 | 0,012150 | 0,018200 | 0,040850 | 0,016111 | 50,4 % |
+
+**Médiane 0,0148 contre une consigne de 0,0146, soit +1,4 % : l'homéostasie atteint sa cible.**
+La distribution est simplement asymétrique — la queue à droite (p99 ≈ 2,7 × la consigne) tire la
+moyenne à 0,0161. Aucune recalibration n'est justifiée.
+
+Deux erreurs ont été commises avant d'arriver là, et elles valent d'être nommées :
+
+1. **Mauvaise statistique.** Comparer une MOYENNE DE POPULATION à une consigne appliquée PAR
+   NEURONE. Les deux ne coïncident que si la distribution est resserrée et symétrique — ce
+   qu'il fallait vérifier avant de conclure, pas supposer.
+2. **Mauvais compteur.** Le champ `Organism.corticalSpikes` accumulait `lif.spikeCount`,
+   c'est-à-dire les décharges de **tout le réseau**, malgré son nom et son commentaire. Divisé
+   par le seul effectif cortical, il surestimait le taux de 23 % (0,0198 au lieu de 0,0161).
+   Le champ est renommé **`spikesReseau`** et son rôle documenté ; `organism.probe.test.ts`
+   faisait déjà la mesure correcte, en sommant `spikeTotal` sur la région.
+
+Empilées, ces deux erreurs faisaient conclure à un écart de 35,6 % et à une homéostasie
+sous-dimensionnée. Les deux étaient faux.
+
+### Ce que la fenêtre de crédit a vraiment apporté
+
+Une suite verte ne prouve rien ici : le clamp à `wMax` fait passer parfaitement l'assertion
+`w <= wMax` sur un réseau entièrement saturé. Mesuré à la place **homéostasie coupée**, de sorte
+que toute dérive soit imputable à la règle à trois facteurs (le témoin gelé-total ayant une
+dérive exactement nulle, aucune soustraction n'est nécessaire) — 3 graines, 20 000 ticks,
+n = 2500 :
+
+| fenêtre | dérive due à la règle | part du mouvement homéostatique |
+|---|---|---|
+| 60 (avant) | 0,001409 | 3,4 % |
+| **2 500 (après)** | **0,004934** | **12,0 %** |
+
+**×3,50, et non ×42.** `tauElig` gouverne la décroissance de l'éligibilité, mais le mouvement
+réel reste plafonné par la rareté des récompenses (~30 en 20 000 ticks). Aucune arête n'est
+saturée contre `wMax`. Le lot 0 améliore donc le rapport de force sans le renverser :
+l'homéostasie garde 88 % du mouvement synaptique. À consigner tel quel, pas à arrondir en
+succès. Le test `organism.test.ts -t "fenêtre de crédit"` épingle le gain avec un seuil à ×2,
+volontairement sous la mesure.
+
+### Hypothèse pour le lot 1, à tester et non à supposer
+
+`homeoEvery` reste à 500 ticks. Face à une fenêtre de crédit de 2 500, l'homéostasie tire
+désormais **5 fois À L'INTÉRIEUR d'une même fenêtre**, là où elle tirait une fois toutes les
+~8 fenêtres. À `homeoClamp` 0,05, chaque passage peut remettre à l'échelle un incrément appris
+de ±5 %. C'est un mécanisme plausible pour qu'elle produise 88 % du mouvement synaptique tout
+en ne déplaçant guère la distribution des taux : beaucoup de mouvement, largement
+auto-annulé. `lr`, absent de la liste de recalibration du plan, est le second suspect.
+
+À **tester** au lot 1, en faisant varier un paramètre à la fois. Pas à corriger sur la foi du
+raisonnement ci-dessus.
