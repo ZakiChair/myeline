@@ -89,3 +89,35 @@ export const TOPOLOGIE_DEFAUT: TopologyParams = {
   wInh: 0.28,
   wMax: 1.5,
 };
+
+// ─── Neurone LIF ────────────────────────────────────────────────────────────────────────
+
+export interface LifParams {
+  /** Constante de fuite membranaire, en ticks. */
+  tauM: number;
+  /** Fuite du courant synaptique, en ticks. */
+  tauS: number;
+  /** Retour du seuil vers thrBase, en ticks. */
+  tauThr: number;
+  vRest: number;
+  vReset: number;
+  thrBase: number;
+  /** Saut de seuil après décharge : le frein qui empêche un neurone de monopoliser l'activité. */
+  thrJump: number;
+  /** Ticks de réfractaire. */
+  refrac: number;
+  /** Écart-type du bruit de courant, par tick. */
+  noise: number;
+}
+
+export const LIF_DEFAUT: LifParams = {
+  tauM: 20,
+  tauS: 5,
+  tauThr: 120,
+  vRest: 0,
+  vReset: 0,
+  thrBase: 1,
+  thrJump: 0.18,
+  refrac: 3,
+  noise: 0.02,
+};
