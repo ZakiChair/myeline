@@ -27,15 +27,37 @@ synaptique (**mesuré**). Et l'horloge du modèle était **incohérente** : aucu
 ses constantes simultanément plausibles (§4). Ni l'un ni l'autre ne se corrige en ajoutant des
 neurones ; les deux se corrigent en adoptant l'organisation d'un animal réel.
 
-Symétriquement : le cerveau d'abeille compte **950 000 à 960 000 neurones** dans ≈ 1 mm³
-(Witthöft 1967, **publié** — les deux chiffres circulent selon ce que le comptage inclut). La
-majorité sont dans les lobes optiques. Les cellules de Kenyon qui portent l'apprentissage associatif
-y sont **éparses**, et l'apprentissage est confiné à une petite couche de sortie. **Le noyau
-fonctionnel est donc petit et peu coûteux : atteindre 10⁶ neurones est un objectif de complétude et
-de rendu, pas un objectif d'apprentissage.**
+**Et le « faible signal » du lot 1 était probablement nul.** Le protocole de la tâche 9 a été rejoué
+sur **12 graines** au lieu de 3 (**mesuré**, réplique exacte : la graine 1 redonne 451 → 574 et
+509 → 449, et les huit médianes par tranche à l'identique) :
+
+| échantillon | effet plastique / gelé | conclusion |
+|---|---|---|
+| 3 graines (le journal) | ×1,17 | puissance réelle **18 %** |
+| **12 graines** | **×1,072**, IC 95 % **[×0,908 ; ×1,266]**, p ≈ 0,38 | **l'IC contient 1,0** |
+
+**Un effet qui rétrécit quand on étend l'échantillon est la signature d'un artefact de petit
+échantillon.** Détecter ×1,17 à 80 % de puissance demanderait **24 graines (48 exécutions)** ; détecter
+×1,072, **114 graines**. La conclusion n'est donc pas « il faut plus de graines » mais « il faut
+changer le modèle » — ce que ce document propose. Deux estimations indépendantes convergent sur ce
+chiffre de 24 : la dispersion intra-run du journal en donne 18,5, la dispersion inter-graines 22 à 24.
+*Précision méthodologique utile : les 8 tranches d'une exécution ne sont pas indépendantes —
+sur-dispersion ×1,61, soit ≈ 3,1 tranches réellement indépendantes sur 8. Allonger les runs n'achète
+pas de puissance ; seules les graines en achètent.*
+
+Symétriquement, et c'est ce que le dossier anatomique établit : le cerveau d'abeille compte **850 000
+à 960 000 neurones** dans ≈ 1 mm³ (Witthöft 1967 — **une seule source, jamais refaite**, voir §3).
+**Plus de 40 % de ces neurones sont des cellules de Kenyon** — ≈ 368 000 (Groh & Rössler 2020,
+**solide**). Or leur code est **épars : ≈ 7 % au maximum répondent à une odeur, mesuré chez l'abeille**
+(Szyszka et al. 2008), et l'apprentissage est confiné à une couche de sortie de ≈ 400 neurones.
+
+**Et trois modèles publiés reproduisent l'apprentissage olfactif de l'abeille — jusqu'aux concepts
+abstraits — avec 4 000 à 5 000 cellules de Kenyon** (§3). Les fonctions ne demandent donc pas
+l'échelle ; elles demandent la bonne organisation. **Atteindre 10⁶ neurones est un objectif de
+complétude et de rendu, pas un objectif d'apprentissage.**
 
 Cela ne retire rien à la cible de Zaki. Cela la sépare en deux chantiers et dit lequel porte les
-fonctions. Le §8 chiffre l'autre.
+fonctions. Le §8 chiffre l'autre — et il montre que la limite y est la **mémoire**, pas la vitesse.
 
 ### Les trois lectures de « modèle de développement »
 
@@ -44,10 +66,29 @@ La demande est ambiguë et le CLAUDE.md du dépôt interdit de trancher silencie
 1. **Les règles génératives qui construisent le réseau** — `buildTopology`. Remplacer la dalle
    corticale inventée par une construction ancrée sur des neuropiles nommés et comptés.
    **→ Lecture retenue.**
-2. **La neurogenèse réelle** — ordre de naissance des cellules de Kenyon, couches concentriques du
-   calice, rétinotopie des lobes optiques, maturation post-émergence. **→ Ouverture bornée** (§11,
-   question 5), à n'implémenter que si les règles sont assez établies pour ne pas être une invention
-   déguisée.
+2. **La neurogenèse réelle.** Le dossier montre qu'elle est **plus implémentable que je ne le
+   supposais**, avec quatre règles de statut solide :
+   - **Aucune neurogenèse adulte chez *Apis***, contrairement au grillon et à *Tribolium* qui en ont
+     dans les corps pédonculés (Scotto-Lomassese et al. 2002 ; Cayre et al. 2005). Donc **la topologie
+     figée pendant la vie, choix du lot 1, est biologiquement juste** — ce n'était pas seulement une
+     commodité.
+   - **Le rayon du calice est une horloge de naissance inversée** : arrangement concentrique, cellules
+     les plus vieilles à l'extérieur, prolifération au centre, depuis ≈ 2 000 neuroblastes
+     (Farris et al. 1999 ; confirmé par Kamata, Kubo & Kohno 2025). **Directement implémentable comme
+     règle générative.**
+   - **Le calice est compartimenté par modalité** : lèvre = olfactif, collier = visuel, anneau basal =
+     les deux, zone intermédiaire = gustatif / mécanosensoriel (Groh & Rössler 2020). C'est une règle
+     de câblage, pas une décoration.
+   - **L'expérience change le nombre de synapses, pas le nombre de neurones** : l'exposition
+     sensorielle non associative **fait baisser** la densité de microglomérules de façon spécifique à
+     la modalité ; la mémoire olfactive à long terme **la fait monter** à volume constant, et l'effet
+     est bloqué sans transcription (Hourcade et al. 2010 ; Scholl et al. 2014). La température de
+     couvain à la nymphose fixe même le nombre de microglomérules à l'émergence, avec un maximum à
+     34,5 °C (Groh, Tautz & Rössler 2004).
+
+   **→ Ouverture bornée** (§11, question 5) : les deux premières règles sont assez établies pour être
+   implémentées ; la dernière ouvre un sujet entier (plasticité structurale) qui n'est pas celui de ce
+   document.
 3. Le **modèle de développement logiciel** (les lots). **→ Écartée** : la phrase porte sur les
    systèmes neuronaux, pas sur la méthode de travail.
 
@@ -106,21 +147,66 @@ antennes ──▶ lobe antennaire ──▶ corps pédonculés ─────�
 
 | Population | Rôle | Effectif réel | Statut | Plastique |
 |---|---|---|---|---|
-| Récepteurs olfactifs | transduction | ≈ 60 000 par antenne | à confirmer | non |
-| Glomérules du lobe antennaire | décorrélation, normalisation | ≈ 160 | **à confirmer** | non |
-| Neurones de projection | glomérule → calice | ≈ 800–900 | à confirmer | non |
-| **Cellules de Kenyon** | code épars | 100 000 à 200 000 **par hémisphère** | **à confirmer** — l'ambiguïté « par hémisphère ou au total » n'est pas résolue par les sources consultées | non |
-| **APL** (rétroaction GABAergique) | normalisation, sparsité | 1 à quelques | publié qualitativement | non |
-| **Neurones de sortie (MBON)** | lecture apprise | dizaines à centaines | à confirmer | **OUI — la seule couche plastique** |
-| Corne latérale | voie innée, non apprise | — | à confirmer | non |
-| **VUMmx1** | octopamine, appétitif | **1** | **publié** (Hammer 1993) | non |
-| Neurones dopaminergiques | aversif | **plusieurs sous-populations** | **publié** | non |
-| Lobes optiques | majorité du cerveau | ≈ 2/3 | à confirmer | absents au lot 1 |
-| Complexe central | cap, intégration de trajet | ≈ 100 unités fonctionnelles | **publié** (§6, F10) | non — **câblé** |
+| Récepteurs olfactifs | transduction | ≈ 60 000 par antenne | moyenne | non |
+| **Glomérules du lobe antennaire** | décorrélation | **≈ 160** (fourchette 156–166) | **solide** — Galizia et al. 1999 (atlas 3D), Flanagan & Mercer 1989, Sandoz 2011 | non |
+| Interneurones locaux du lobe antennaire | inhibition, normalisation | **≈ 4 000 par lobe** | solide — Fonta et al. 1993 | non |
+| **Neurones de projection uniglomérulaires** | lobe → calice | **≈ 900** (m-ALT ≈ 410, l-ALT ≈ 510) ; ≈ 5–6 par glomérule | **solide** — Rybak & Eichmüller 1993, Brill et al. 2015 | non |
+| **Cellules de Kenyon** | code épars | **≈ 170 000 de classe I + 14 000 de classe II PAR corps pédonculé, soit ≈ 368 000 au total** — **plus de 40 % des neurones du cerveau** | **solide** — Groh & Rössler 2020, *Insects* 11:43 ; comptage d'origine Witthöft 1967 | non |
+| **Neurones A3** (rétroaction GABAergique) | impose la sparsité | **≈ 110 au total**, dont ≈ 50 de rétroaction spécifiques de compartiment | **solide** — Zwaka et al. 2018 ; Haehnel & Menzel 2010 | non |
+| **Neurones de sortie (MBON)** | lecture apprise | **≈ 400** | moyenne — Frontiers in Neuroanatomy 2018, 12:57 | **OUI — la seule couche plastique** |
+| Corne latérale | voie innée, non apprise | — | moyenne | non |
+| **VUMmx1** | octopamine, appétitif | **1 neurone** | **solide** — Hammer 1993 ; Farooqui et al. 2003 | non |
+| **Neurones dopaminergiques** | aversif | **400–450 somata par hémisphère**, en **4 amas** (C1 ≈ 75, C2 ≈ 75, C3 ≈ 140, C4 ≈ 80) + 18 sous-œsophagiens ; ≈ 0,1 % du cerveau | **solide** — Tedjakumala et al. 2017 | non |
+| Lobes optiques | majorité du cerveau | ≈ 216 000 cellules **chacun** | **incertaine** — voir la contradiction ci-dessous | absents jusqu'au lot 3 |
+| Complexe central | cap, intégration de trajet | **24 sous-types morphologiques identifiés, ZÉRO comptage publié** chez l'abeille | solide (l'absence de comptage l'est) — Hensgen et al. 2021 | non — **câblé** |
 
-**Aucun comptage « à confirmer » n'entre dans le code avant vérification sourcée.** Toute population
-non confirmée est étiquetée **inventée** dans le code et dans l'interface. C'est le standard du
-projet, appliqué à l'anatomie.
+**Résolutions apportées par le dossier :** l'ambiguïté « par hémisphère ou au total » sur les cellules
+de Kenyon est **tranchée** — 170 000 par corps pédonculé, ≈ 368 000 au total. Et la sparsité du code
+est **mesurée chez l'abeille** : jusqu'à 20 somas répondants sur ≈ 300 colorés, soit **≈ 7 % au
+maximum** (Szyszka, Galkin & Menzel 2008). Les 5 % de mes sondes sont donc dans la plage réelle.
+
+**Deux réserves à porter dans le code :**
+
+- **Le comptage total du cerveau repose sur UNE SEULE source de 1967, jamais refaite** avec des
+  méthodes modernes (Witthöft, thèse allemande, non consultée en original). Les chiffres qui circulent
+  vont de **850 000 à 960 000**, et le « ≈ 950 000 » le plus cité est une valeur de revue qui *dépasse*
+  le total de la source primaire. **Statut : moyenne, jamais solide.**
+- **Contradiction non résolue dans la littérature** : deux régions seulement — les deux lobes optiques
+  (2 × 216 000 = 432 000) et les cellules de Kenyon (368 000) — totalisent **800 000 cellules**, alors
+  qu'une autre source donne **613 000 ± 128 000 pour le cerveau entier**. Les comptages par neuropile
+  sont donc **le point faible du dossier**. Conséquence : les lobes optiques entrent au lot 3 avec un
+  effectif **explicitement étiqueté incertain**, pas avec un chiffre présenté comme acquis.
+
+**Aucun comptage de statut « incertaine » n'entre dans le code sans son étiquette.** C'est le standard
+du projet, appliqué à l'anatomie.
+
+### Il n'existe aucun connectome d'abeille — et ce n'est pas bloquant
+
+**Fait établi (statut solide, juillet 2026) : il n'existe AUCUN connectome synaptique d'*Apis
+mellifera***, ni complet ni à l'échelle d'un neuropile. Ce qui existe est un atlas 3D (Rybak et al.
+2010, « The Digital Bee Brain ») et des comptages cellulaires. Les connectomes disponibles sont ceux
+de la drosophile (hemibrain : ≈ 25 000 neurones, ≈ 20 M synapses).
+
+**Conséquence méthodologique, à assumer :** la correspondance au réel se fait au niveau des
+**populations nommées, de leurs effectifs et de leurs motifs de projection** — pas au niveau du
+câblage synapse par synapse, qui n'existe pas pour cette espèce. Toute règle de connectivité fine sera
+donc soit importée de la drosophile (et étiquetée comme telle), soit inventée. Le seul endroit du
+cerveau d'abeille où un décompte synaptique existe est le **microglomérule du calice** (densités
+mesurées : 32,9 ± 1,9 par 1 000 µm³ dans la lèvre olfactive, Groh et al.).
+
+### Trois modèles publiés démontrent les fonctions avec 4 000 à 5 000 cellules de Kenyon
+
+C'est l'argument le plus direct en faveur du verdict du §1, et il vient de l'état de l'art :
+
+| Modèle | Architecture | Ce qu'il démontre |
+|---|---|---|
+| Huerta & Nowotny 2004 | expansion lobe → KC à poids **fixes aléatoires**, **une seule étape plastique** | Le principe fondateur : la seule couche plastique est la sortie. **C'est exactement l'architecture proposée ici.** |
+| **Peng & Chittka 2017** (*Current Biology* 27:224) | **100 PN → 4 000 KC → 2 MBON**, **2 neurones de renforcement** (récompense / punition) | Reproduit des formes d'apprentissage olfactif jugées **complexes** chez l'abeille. Valide aussi la thèse des **deux voies de renforcement** (§3c). |
+| **Cope et al. 2018** (*PLOS Comput Biol* 14:e1006435) | 144 entrées → **5 000 KC** → 8 neurones de sortie + 6 neurones de rétroaction | Apprend des **concepts abstraits** (identité / différence) — la fonction cognitive la plus haute attribuée à l'abeille. |
+
+**Les fonctions ne demandent donc pas 368 000 cellules de Kenyon.** Elles sont publiées à 4 000 et à
+5 000. Cela ne rend pas l'échelle réelle inutile — elle gouverne la **capacité mémoire** du code épars
+— mais elle n'est pas le prérequis des fonctions, et le prétendre serait faux.
 
 ### Les trois différences structurelles qui règlent l'échec du lot 1
 
@@ -658,12 +744,18 @@ indifférents à la tâche, et mesurés.
 Deux calculs indépendants convergent (**calculé**, à partir du rapport de 59,75 arêtes par neurone
 **mesuré** au lot 1) :
 
-| n | arêtes | topologie | traces | **total** | ticks/s |
-|---|---|---|---|---|---|
-| 2 500 | 0,15 M | 3 Mo | 1 Mo | **4 Mo** | 7 493 (**mesuré**) |
-| 50 000 | 2,99 M | 51 Mo | 24 Mo | **75 Mo** (**mesuré ≈ 72**) | 304 (**mesuré**) |
-| 500 000 | 29,9 M | 512 Mo | 239 Mo | **751 Mo** | ≈ 30 |
-| **960 000** (l'abeille) | **57,4 M** | **983 Mo** | **459 Mo** | **1 442 Mo** | ≈ 15 |
+| n | arêtes | mémoire | ticks/s | statut du débit |
+|---|---|---|---|---|
+| 2 500 | 0,15 M | **4 Mo** | 7 493 | **mesuré** |
+| 50 000 | 2,99 M | **75–89 Mo** | 304 – 340 | **mesuré** (deux mesures indépendantes) |
+| 100 000 | 5,98 M | **168 Mo** | **167** | **mesuré** |
+| 200 000 | 11,95 M | **327 Mo** | **84** | **mesuré** |
+| 500 000 | 29,9 M | **751 Mo** | ≈ 34 | extrapolé |
+| **960 000 – 10⁶** (l'abeille) | **57,4 M** | **1,44 – 1,64 Go** | **≈ 15 – 17** | extrapolé |
+
+Le débit est en **1/n exact** sur les trois points mesurés (340 → 167 → 84 pour n × 2 à chaque fois),
+ce qui rend l'extrapolation solide. Et deux calculs de mémoire indépendants convergent sur 1,44 à
+1,64 Go.
 
 À 500 000 neurones on dépasse déjà de **2,5 fois** la borne d'arrêt de 300 Mo que le plan du lot 1
 s'était fixée. À 960 000 on demande **1,4 Go de tableaux typés** dans un moteur JavaScript
@@ -681,26 +773,101 @@ changement de substrat** (WebGPU, wasm + SIMD, ou quantification des poids). Et 
 donc des résultats falsifiables sur les fonctions **maintenant**, à petite échelle. C'est le
 découplage le plus utile de ce document.
 
-### La contrainte que le rendu impose : le déterminisme
+### Le déterminisme : trois prémisses du projet sont fausses (**mesuré**)
 
-Le noyau est reproductible **au bit près** pour une graine donnée — l'un des trois seuls acquis du
-lot 1. Toutes les preuves (gelé, yoked, lésion) reposent sur la possibilité de rejouer exactement la
-même vie en ne changeant qu'une variable. Deux réserves :
+Une analyse dédiée a mesuré ce que le projet supposait. Méthode : le noyau bundlé **une seule fois**,
+puis le **même fichier** exécuté sous Node 26 (moteur V8) et sous Bun 1.3.11 (moteur JSC, celui de
+Safari). Trois résultats renversent les prémisses.
 
-1. **La garantie est probablement plus faible que le projet ne le croit.** Le noyau utilise
-   `Math.log` / `Math.cos` (Box–Muller, dans le **câblage** via `topology.ts:63-66`, pas seulement
-   dans le bruit), `Math.exp` (`plasticity.ts:49`) et `Math.cbrt` (`topology.ts:153`, qui fixe le
-   découpage des régions). Les transcendantes ne sont **pas** spécifiées au bit près par ECMAScript :
-   la reproductibilité vaut *sur le même moteur*, pas nécessairement entre machines ou versions. **À
-   vérifier, pas à supposer.** Le passage à Ziggurat (§5.4) retire les transcendantes du chemin par
-   tick et améliore donc la situation.
-2. **Le GPU et le multi-thread cassent le bit-à-bit** (ordre de réduction des sommes flottantes,
-   atomiques). Si le rendu à 10⁶ neurones les exige, alors **deux moteurs** : un moteur de preuve
-   petit, mono-thread, bit-exact ; un moteur d'affichage rapide qui ne prouve rien. Risque principal :
-   la divergence silencieuse, qui demande un test d'équivalence statistique.
+**1. Le noyau n'est PAS reproductible entre machines — et ce n'est pas le réseau, c'est le monde.**
 
-Une analyse dédiée est en cours, incluant le calcul de puissance donnant le nombre de graines
-nécessaire si le déterminisme est abandonné. **Ce document ne tranche pas ici** (§11, question 4).
+| test | ticks | n | V8 vs JSC |
+|---|---|---|---|
+| topologie complète (câblage, positions, signes) | — | 2 500 | **identique** |
+| LIF + éligibilité + dopamine + homéostasie | **400 000** | **50 000** | **identique** (`v` et les 2,99 M poids) |
+| **monde seul** | 20 000 | — | **DIFFÈRE** |
+| **organisme complet** | 20 000 | 2 500 | **DIFFÈRE** — 35 vs 42 morts, 54 vs 60 nourritures |
+
+Le coupable est localisé à **14 appels dans `world.ts`**, par deux mécanismes : `x`, `y`, `heading`
+sont des `number` nus (`world.ts:17-19`) donc **jamais requantifiés**, et les 7 `Math.hypot` +
+l'`Math.atan2` alimentent des **comparaisons de seuil** et des **index de secteur entiers** —
+amplificateurs discrets, non absorbables. Premier bit divergent au tick 4 925 ; trajectoire
+macroscopiquement différente au tick 17 942 ; écart final 89,6 unités dans une arène de demi-côté 80,
+soit décorrélation totale.
+
+**2. Le `Float32Array` n'est pas un compromis de mémoire : c'est le mécanisme qui PRODUIT la
+reproductibilité.** Sur 10⁷ tirages Box–Muller, **6,94 % diffèrent entre V8 et JSC en double** — et
+**0 sur 10⁷ survivent à l'arrondi f32**. Passer l'état en `Float64Array` **détruirait** la
+reproductibilité inter-moteurs. Le choix fait pour la mémoire est ce qui tient le déterminisme :
+contre-intuitif, et à ne pas défaire par inadvertance.
+
+**3. Le déterminisme n'achète AUCUNE puissance statistique.** Le témoin **lésion** fait diverger les
+décharges des neurones **intacts** dès le **tick 4** ; le témoin **gelé** dès le **tick 56** — sur
+400 000. Il n'existe donc aucune trajectoire partagée à différencier. Corroboration : la corrélation
+plastique/gelé à graine appariée vaut **r = −0,150**, et l'écart-type apparié (0,2620) est
+**supérieur** au non apparié (0,2445) : l'appariement est au mieux neutre. **Ce que le déterminisme
+achète est l'auditabilité, le débogage et la non-régression — pas la preuve.** La phrase du journal
+« reproductible au bit près » est vraie *dans une session*, fausse comme propriété du modèle : aucun
+chiffre publié n'est aujourd'hui re-dérivable sur une autre machine.
+
+### Décision : un seul moteur, bit-exact par construction
+
+**WebGPU est écarté, et pas pour difficulté — par spécification.** `atomic<f32>` **n'existe pas** en
+WGSL (issue gpuweb #4894, ouverte en septembre 2024, toujours « Waiting for proposal » en juillet
+2026). Metal sait le faire, WGSL ne sait pas l'exprimer. Et même avec des atomiques en point fixe —
+qui, elles, sont exactement associatives — le **§15.7.5 de WGSL autorise explicitement la
+réassociation et la fusion** des opérations, et le §15.7.4 laisse `cos`/`sin` à précision indéfinie
+hors de [−π, π]. Un même binaire sur un même pilote est stable *en pratique* ; c'est une propriété de
+fait, jamais de spécification, qu'une mise à jour de macOS peut casser sans avertissement.
+
+**WASM mono-thread serait déterministe par spécification** (IEEE 754, round-to-nearest-ties-to-even
+imposé ; seuls les bits de charge utile des NaN sont libres — sans objet ici). ⚠️ **À proscrire : le
+« relaxed SIMD » de Wasm 3.0** (`relaxed_madd`, `relaxed_min/max`, `relaxed_dot`…), dont l'arrondi
+dépend du matériel. Le SIMD classique `f32x4`/`f64x2` reste sûr.
+
+**Mais WASM n'est pas nécessaire.** Résultat le plus actionnable de l'analyse : **une libm écrite en
+arithmétique pure (`+ − × ÷` et `Math.sqrt` seulement), en JavaScript, donne des bits identiques
+sous V8 et sous JSC** — là où les `Math.*` correspondants diffèrent tous. Ses erreurs sont 3 à 7
+ordres de grandeur **sous** la précision f32 du stockage : la portabilité ne coûte rien en fidélité.
+
+**Trois chantiers, par ordre de rendement :**
+
+1. **Les 14 appels de `world.ts`.** Les 7 `Math.hypot` → `Math.sqrt(dx*dx+dy*dy)`, **gratuit et
+   exact** (`Math.sqrt` est vérifié identique entre moteurs). Les `cos`/`sin`/`atan2` → libm portable.
+   Et **stocker `x`, `y`, `heading` en `Float32Array`** pour leur donner le pare-feu du réseau.
+2. **Les 3 constantes de décroissance** (`lif.ts:75`, `plasticity.ts:121-122`) → littéraux. Coût nul,
+   supprime la mine la plus dangereuse : si `Math.exp(-1/5)` divergeait un jour, ce serait 100 % des
+   neurones perturbés par tick au lieu de 6,94 %.
+3. **Le bruit gaussien en table f32.** **Mesuré : `stepLif` passe de 780 à 2 693 ticks/s à
+   n = 50 000, soit ×3,45** — meilleur que le ×2,55 de ma propre mesure (§5.4). ⚠️ **Mais à
+   n = 10⁶, une table de 65 536 entrées est réutilisée ≈ 15 fois par tick**, ce qui introduit une
+   corrélation spatiale entre neurones au sein d'un tick. Pour un réseau dont le régime spontané est
+   **porté par le bruit**, ce n'est pas un détail numérique : élargir à 2²⁰ entrées (4 Mo,
+   réutilisation ≈ 1) et **gater sur la porte de calibration**, pas décréter le gain gratuit.
+
+**Prix à payer, à annoncer** : ces corrections produisent un **organisme différent**. Toute constante
+calibrée du journal (`arena` 80, `metabMove` 0,10, `olfRange` 55, `TAUX_HOMEO` 0,0146) a été réglée
+contre la dynamique actuelle et devra repasser `calibration.probe.test.ts`.
+
+**Le second moteur est écarté, et l'argument est chiffré.** À n ≥ 10 000, une différence d'un seul ULP
+dans l'accumulation fait diverger le raster de décharges en ≈ 500 ticks : aucune comparaison
+tick-par-tick n'est possible au-delà. Il ne reste que l'équivalence statistique — qui **ne détecterait
+pas un bug dans la règle d'apprentissage**, précisément ce que le projet veut démontrer (un signe
+inversé dans la dépression produirait des distributions de taux parfaitement conformes). Et le test
+qui la rendrait fiable coûterait **96 exécutions ≈ 30 h au mur à n = 10⁶, à chaque modification de la
+règle**. Le test coûte plus cher que l'expérience qu'il sert.
+
+**Découpe retenue : un seul calculateur de dynamique** (JS mono-thread, dans un worker), aux échelles
+de preuve (n = 2 500 – 50 000, **340 ticks/s mesurés à 50 000**), et **le GPU cantonné au rendu** — il
+ne calcule aucun état, il reçoit positions, décharges et poids, et il dessine. Son non-déterminisme
+est alors sans conséquence : personne ne prouve rien avec des pixels. À 17 ticks/s pour 10⁶ neurones,
+l'affichage n'a de toute façon pas besoin d'un pas de temps par image.
+
+Si un jour le temps réel à 10⁶ neurones devient impératif, la seule forme défendable est le **gather
+déterministe** : renverser la boucle de `lif.ts:126` pour que chaque neurone somme ses arêtes
+**entrantes** dans l'ordre fixe du CSR — **que le projet possède déjà** (`topology.ts:287-299`) — avec
+partition fixe et double tampon. Coût : un tableau `inDelay` (+1 o/arête, +60 Mo à n = 10⁶) et une
+localité dégradée.
 
 ---
 
@@ -749,6 +916,23 @@ olfactive, pas un animal. À écrire ainsi dans l'interface.
 | La compression de l'ITI (facteur 75) | moyenne | Déclarée en §6.2, avec sa conséquence : la mémoire à long terme espacée sort du périmètre. Vérifier que l'ITI comprimé reste > 4 × `tauElig`. |
 | Perte du parcours `/theorie` | faible | Inchangé. Le « mur du crédit » garde toute sa valeur — et le §4 explique enfin *de combien* la fenêtre était trop courte. |
 
+### Deux affirmations du journal de calibration à corriger
+
+Le journal est le principal actif du projet, et c'est pourquoi ces deux points doivent être rectifiés
+plutôt que laissés :
+
+1. **« Reproductible au bit près pour une graine donnée »** (présenté comme l'un des trois acquis du
+   lot 1) est vrai *dans une session*, **faux comme propriété du modèle** : l'organisme complet diverge
+   entre V8 et JSC dès le tick ≈ 17 942 (§8). Aucun chiffre publié n'est aujourd'hui re-dérivable sur
+   une autre machine. Le réseau, lui, tient — mais par un mécanisme non intentionnel (l'arrondi f32),
+   pas par conception.
+2. **La « correction de précision float32 » de la tâche plasticité n'a jamais eu lieu.** Vérification
+   dans `git show 36875ff -- src/sim/plasticity.test.ts` : il s'agit d'un **assouplissement de seuil de
+   test** (une tolérance `1e-6` ajoutée à `plasticity.test.ts:227`), introduit dans le commit d'origine
+   du module. L'assertion était plus serrée que la précision f32 ; elle a été relâchée. Il n'y a pas eu
+   de bug de précision dans le noyau. *Et la mesure écarte par ailleurs le float32 comme explication du
+   faible signal : la mise à jour dopaminergique vaut ≈ 2 400 ULP f32, elle n'est pas engloutie.*
+
 ---
 
 ## 11. Questions que seul Zaki peut trancher
@@ -761,9 +945,14 @@ olfactive, pas un animal. À écrire ainsi dans l'interface.
 3. **L'arène actuelle.** Devient-elle un harnais parmi d'autres (ma recommandation : rien n'est
    perdu), ou disparaît-elle ? Elle ne mesure aucun protocole réel, mais c'est elle qui produit
    l'image d'un organisme qui vit.
-4. **Deux moteurs ou un.** Accepte-t-on un moteur d'affichage non déterministe distinct du moteur de
-   preuve, avec le risque de divergence silencieuse ?
-5. **La neurogenèse** (lecture 2 du §1) : périmètre ou ouverture ?
+4. ~~Deux moteurs ou un ?~~ — **tranché par la mesure, plus une question d'arbitrage** : un seul
+   calculateur, GPU cantonné au rendu (§8). Ce qui reste à trancher est en revanche réel :
+   **accepte-t-on de casser la dynamique actuelle pour gagner la reproductibilité inter-machines ?**
+   Les corrections de `world.ts` produisent un organisme différent et invalident toutes les constantes
+   calibrées du journal, qui devront repasser la porte. Je recommande de le faire — mais au lot 0, en
+   même temps que le changement d'horloge, pour ne payer la recalibration qu'une fois.
+5. **La neurogenèse** (lecture 2 du §1) : périmètre ou ouverture ? Deux de ses quatre règles sont
+   désormais assez établies pour être implémentées.
 
 ---
 
@@ -771,9 +960,23 @@ olfactive, pas un animal. À écrire ainsi dans l'interface.
 
 Si l'un de ces points est faux, la recommandation change.
 
-- Les comptages de cellules de Kenyon et de glomérules sont **à confirmer**, et l'ambiguïté
-  « par hémisphère ou au total » sur les cellules de Kenyon n'est **pas résolue**. Cela change
-  l'échelle du lot 3, pas l'architecture.
+- ~~Les comptages de cellules de Kenyon et de glomérules sont à confirmer~~ — **résolu** : ≈ 170 000
+  cellules de Kenyon par corps pédonculé, ≈ 368 000 au total, ≈ 160 glomérules, ≈ 900 neurones de
+  projection, ≈ 400 neurones de sortie, ≈ 110 neurones A3 (§3, statut solide).
+- **Mais le comptage TOTAL du cerveau reste faible** : une seule source de 1967, jamais refaite, et une
+  **contradiction non résolue** entre les comptages par neuropile (800 000 pour deux régions contre
+  613 000 ± 128 000 pour le cerveau entier). Si la fourchette basse est la bonne, la cible de « 700 000
+  à 1 million » est elle-même surestimée. Cela ne change pas l'architecture, mais cela change ce qu'on
+  a le droit d'écrire dans l'interface.
+- **Il n'existe aucun connectome d'abeille.** Toute règle de connectivité fine sera importée de la
+  drosophile ou inventée, et doit être étiquetée comme telle.
+- **L'inhibition de rétroaction n'est pas un neurone unique chez l'abeille** : ≈ 110 neurones A3, dont
+  ≈ 50 spécifiques de compartiment — là où la drosophile a un APL unique par côté. Ma sonde §5.5
+  modélise **une** unité. Le résultat de stabilité devrait tenir *a fortiori* avec une population
+  (moyennage), mais la **spécificité de compartiment** ouvre une possibilité que la sonde n'explore
+  pas : une sparsité réglée séparément par compartiment du calice.
+- **Le complexe central de l'abeille n'a aucun comptage publié** (24 sous-types identifiés, zéro
+  effectif). Toute taille de population y sera importée de la drosophile ou du modèle de Stone.
 - Le rapport `tauElig / tauM` biologique (50 à 1 000) vient de la littérature générale sur les traces
   d'éligibilité, pas d'une mesure chez l'abeille. Les deux chiffres abeille qui l'étayent (ISI
   optimal ≈ 3 s, latence dopaminergique 96 ms) sont solides ; **le rapport lui-même est une
