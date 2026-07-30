@@ -142,19 +142,23 @@ describe("décodage moteur par course au seuil", () => {
     const b = createBrain(cfg({ accTimeout: 1e9 }));
     const mot = regionById(b.topo, "MOTOR");
     const { start, end } = poolRange(mot, 1);
+    // Une fraction du pool seulement : c'est le régime réel, où la preuve monte par petits
+    // apports. Saturer tout le pool ferait franchir le seuil dès le premier tick.
+    const partiel = start + Math.max(1, Math.round((end - start) / 10));
     const suite: number[] = [];
     let action = null;
-    for (let k = 0; k < 200 && action === null; k++) {
-      for (let i = start; i < end; i++) b.lif.inject[i] = 10;
+    for (let k = 0; k < 400 && action === null; k++) {
+      for (let i = start; i < partiel; i++) b.lif.inject[i] = 10;
       action = stepBrain(b, mulberry32(k + 1));
       suite.push(b.acc[1]);
     }
     expect(action).toBe(ACTIONS[1]);
-    expect(suite.length).toBeGreaterThan(4); // la décision n'est pas instantanée
-    // Le pool est réfractaire 3 ticks sur 4 : l'accumulateur monte d'un cran, redescend, puis
-    // remonte plus haut. La croissance se lit sur une période réfractaire, pas tick à tick.
-    const periode = 1 + CERVEAU_DEFAUT.lif.refrac;
-    expect(suite[periode]).toBeGreaterThan(suite[0]);
+    // Le pool est réfractaire 3 ticks sur 4 : la preuve monte par apports espacés. Ce qui
+    // compte est qu'elle PERSISTE entre deux apports au lieu de repartir de zéro — c'est
+    // l'intégration temporelle qui rend l'instant du choix visible.
+    expect(suite.length).toBeGreaterThan(1 + CERVEAU_DEFAUT.lif.refrac);
+    for (let k = 0; k < suite.length - 1; k++) expect(suite[k]).toBeGreaterThan(0);
+    expect(suite[suite.length - 1]).toBe(0); // remise à zéro au franchissement
   });
 
   it("fait décroître les accumulateurs en l'absence de décharges motrices", () => {

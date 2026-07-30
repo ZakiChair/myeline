@@ -34,8 +34,8 @@ export interface WorldState {
   deaths: number;
   /** Ticks écoulés depuis la dernière réapparition. */
   lifeTicks: number;
-  /** Durées de vie closes, dans l'ordre. */
-  lifetimes: number[];
+  /** Durée de la dernière vie close, 0 si aucune. L'historique appartient à `metrics`. */
+  lastLifetime: number;
 }
 
 export interface WorldStep {
@@ -86,7 +86,7 @@ export function createWorld(p: WorldParams, rng: RNG): WorldState {
     hits: 0,
     deaths: 0,
     lifeTicks: 0,
-    lifetimes: [],
+    lastLifetime: 0,
   };
 }
 
@@ -259,7 +259,7 @@ export function stepWorld(
     died = true;
     event = "DEATH";
     w.deaths++;
-    w.lifetimes.push(w.lifeTicks);
+    w.lastLifetime = w.lifeTicks;
     w.lifeTicks = 0;
     w.x = 0;
     w.y = 0;

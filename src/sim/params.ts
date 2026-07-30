@@ -198,10 +198,12 @@ export const PLASTICITE_DEFAUT: PlasticityParams = {
  * DISTINCT de TAUX_CIBLE (le régime entretenu) : l'homéostasie doit viser la moyenne
  * réellement vécue par un neurone, pas le pic sous stimulation. Viser le régime entretenu
  * potentialiserait sans fin les territoires momentanément silencieux, jusqu'à les faire
- * décharger sans entrée. Valeur provisoire entre spontané (0,009) et entretenu (0,022) ;
- * la tâche 7 la corrigera en mesurant le taux cortical réellement vécu par l'organisme.
+ * décharger sans entrée — l'organisme finirait par halluciner ses capteurs.
+ *
+ * Valeur MESURÉE : taux cortical de l'organisme dans son monde, 0,0146 / 0,0149 / 0,0145 sur
+ * trois graines (sonde organism.probe).
  */
-export const TAUX_HOMEO = 0.012;
+export const TAUX_HOMEO = 0.0146;
 
 // ─── Le monde et l'enjeu ────────────────────────────────────────────────────────────────
 //
@@ -242,9 +244,9 @@ export interface WorldParams {
 }
 
 export const MONDE_DEFAUT: WorldParams = {
-  arena: 120,
-  nFood: 14,
-  nToxin: 14,
+  arena: 80,
+  nFood: 20,
+  nToxin: 20,
   foodRadius: 5,
   energyMax: 100,
   energyStart: 60,
@@ -255,14 +257,14 @@ export const MONDE_DEFAUT: WorldParams = {
   rToxin: -1.4,
   rPredator: -2,
   metabRest: 0.05,
-  metabMove: 0.18,
+  metabMove: 0.1,
   stepLen: 1.4,
-  turnStep: 0.22,
+  turnStep: 0.06,
   predatorSpeed: 0.9,
-  predatorSense: 55,
+  predatorSense: 35,
   predatorContact: 6,
-  alarmRange: 90,
-  olfRange: 70,
+  alarmRange: 60,
+  olfRange: 55,
   respawnEvery: 240,
 };
 
@@ -292,7 +294,25 @@ export const CERVEAU_DEFAUT: BrainParams = {
   injectGain: 0.35,
   accLeak: 0.06,
   accGain: 1.0,
-  accSeuil: 2.5,
+  accSeuil: 0.3,
   accTimeout: 60,
   accDefault: "AVANCER",
+};
+
+// ─── L'organisme ────────────────────────────────────────────────────────────────────────
+
+export interface OrganismParams {
+  brain: BrainParams;
+  world: WorldParams;
+  /** Constante de la moyenne glissante rBar, en ticks. */
+  tauReward: number;
+  /** Graine du placement des pastilles et du prédateur, distincte de celle du cerveau. */
+  worldSeed: number;
+}
+
+export const ORGANISME_DEFAUT: OrganismParams = {
+  brain: CERVEAU_DEFAUT,
+  world: MONDE_DEFAUT,
+  tauReward: 400,
+  worldSeed: 12345,
 };

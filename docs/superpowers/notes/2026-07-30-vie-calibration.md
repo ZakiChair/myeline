@@ -143,6 +143,70 @@ cible au lieu de diverger.
 Cette valeur reste provisoire : la tâche 7 mesurera le taux cortical réellement vécu par
 l'organisme dans son monde et la corrigera si besoin.
 
+## Tâche 7 — le vécu de l'organisme (2026-07-30)
+
+Deux défauts structurels que seule la mise en boucle fermée pouvait révéler.
+
+### 1. La course au seuil ne décidait jamais
+
+Mesure initiale : `AVANCER = 333`, toutes les autres actions à zéro, intervalle entre
+décisions **exactement 60 ticks** — c'est-à-dire `accTimeout`. Toutes les décisions venaient
+du délai de garde, aucune du réseau.
+
+Les accumulateurs plafonnaient à **0,86 pour un seuil fixé à 2,5** : inatteignable par
+construction. Le point fixe d'un accumulateur vaut `accGain × taux / accLeak`, soit
+`1 × 0,0125 / 0,06 ≈ 0,21`. En revanche les taux par pool moteur *se différenciaient* bien
+(0,0114 / 0,0129 / 0,0124 / 0,0117), donc le cortex distinguait les pools : seul le seuil
+était hors d'échelle. **`accSeuil` : 2,5 → 0,3.**
+
+### 2. L'organisme ne bougeait que 3,4 % du temps
+
+Même la cadence corrigée, `food = 0` : l'action n'était exécutée qu'au tick de la décision,
+et le monde recevait `STOP` pendant les ~20 ticks d'accumulation suivants. L'organisme
+parcourait 375 unités en 20 000 ticks dans une arène de 240×240 — incapable, structurellement,
+de rencontrer quoi que ce soit.
+
+Correction : **l'action décidée persiste jusqu'à la décision suivante**. C'est la sémantique
+naturelle (on décide « avancer », on avance jusqu'à changer d'avis) et c'est ce qui donne son
+poids à la course au seuil. Conséquence directe : `turnStep` passe de 0,22 à 0,06 rad,
+sinon un virage maintenu 20 ticks ferait plus d'un tour complet.
+
+### 3. Un monde à la bonne densité
+
+Balayages successifs, à 20 000 ticks :
+
+| arène | pastilles | rencontres/vie | vie médiane |
+|---|---|---|---|
+| 120 | 14 | 0,39 | 340 |
+| 80 | 20 | 1,07 | 272 |
+| 60 | 32 | 1,13 | 156 |
+
+| `metabMove` | `energyStart` | morts | vie médiane | rencontres/vie |
+|---|---|---|---|---|
+| 0,18 | 60 | 60 | 272 | 1,07 |
+| **0,10** | **60** | **36** | **430** | **1,50** |
+| 0,06 | 80 | 22 | 1009 | 2,27 |
+
+Retenu : `arena` 80, 20 pastilles de chaque, `metabMove` 0,10, avec les portées ramenées à
+l'échelle de la nouvelle arène (`olfRange` 55, `alarmRange` 60, `predatorSense` 35). Le
+compromis vise assez de morts pour que la durée de vie soit statistiquement comparable, et
+assez de rencontres pour que l'apprentissage ait de la matière.
+
+### Régime final mesuré, sur trois graines
+
+| graine | décisions | dont timeout | intervalle médian | taux cortical | morts | vie médiane | ratio toxine |
+|---|---|---|---|---|---|---|---|
+| 4 | 734 | 108 (15 %) | 20 | 0,0146 | 33 | 588 | 0,300 |
+| 11 | 786 | 96 (12 %) | 19 | 0,0149 | 34 | 484 | 0,362 |
+| 23 | 689 | 111 (16 %) | 23 | 0,0145 | 32 | 499 | 0,381 |
+
+**86 % des décisions viennent du réseau**, pas du délai de garde. D'où la correction promise :
+**`TAUX_HOMEO` : 0,012 → 0,0146**, le taux cortical réellement vécu.
+
+Le ratio toxine inférieur à 0,5 alors qu'il y a autant de toxines que de nourritures est
+*suggestif* mais ne prouve rien : c'est précisément ce que la tâche 9 doit établir en
+comparant début et fin d'expérience, et ce que les témoins du lot 3 devront confirmer.
+
 ### Question ouverte à vérifier au lot 2
 
 L'équilibre excitation/inhibition repose désormais surtout sur l'**amplitude** des poids

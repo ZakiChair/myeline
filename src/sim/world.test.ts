@@ -35,7 +35,7 @@ describe("createWorld", () => {
     expect(w.alive).toBe(true);
     expect(w.foodX.length).toBe(p.nFood);
     expect(w.toxinX.length).toBe(p.nToxin);
-    expect(w.lifetimes).toEqual([]);
+    expect(w.lastLifetime).toBe(0);
   });
 
   it("dispose nourriture et toxine dans l'arène", () => {
@@ -182,8 +182,7 @@ describe("stepWorld", () => {
     expect(r.died).toBe(true);
     expect(r.event).toBe("DEATH");
     expect(w.deaths).toBe(1);
-    expect(w.lifetimes.length).toBe(1);
-    expect(w.lifetimes[0]).toBe(41);
+    expect(w.lastLifetime).toBe(41);
     expect(w.x).toBe(0);
     expect(w.y).toBe(0);
     expect(w.energy).toBe(p.energyStart);
