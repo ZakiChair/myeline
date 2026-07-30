@@ -19,6 +19,21 @@ function areneVide(org: ReturnType<typeof createOrganism>) {
   org.world.toxinCooldown.fill(1_000_000);
 }
 
+/**
+ * Pose une unique pastille de nourriture sur l'organisme, pour qu'une récompense tombe à coup
+ * sûr dès le premier tick.
+ *
+ * Sans cela, un test qui a besoin d'une récompense dépend de la CHANCE DU TRAJET : il ne teste
+ * plus le mécanisme visé mais la probabilité que l'organisme croise une pastille dans la fenêtre
+ * choisie. C'est ce qui l'a fait tomber au lot 0, quand la trajectoire a changé.
+ */
+function pastilleSurPlace(org: ReturnType<typeof createOrganism>) {
+  areneVide(org);
+  org.world.foodX[0] = org.world.x;
+  org.world.foodY[0] = org.world.y;
+  org.world.foodCooldown[0] = 0;
+}
+
 describe("boucle fermée", () => {
   it("fait avancer le monde à chaque tick, même sans décision", () => {
     const org = createOrganism(cfg());
@@ -133,6 +148,9 @@ describe("coutures du lot 3", () => {
         return ctx.reward - ctx.rBar;
       },
     });
+    // La récompense est GARANTIE, plus tirée du trajet : le test porte sur le mécanisme de
+    // moyenne glissante, pas sur la chance de croiser une pastille en 1 200 ticks.
+    pastilleSurPlace(org);
     runOrganism(org, 1200, mulberry32(29));
     expect(new Set(rBars.map((v) => v.toFixed(8))).size).toBeGreaterThan(1);
     // rBar suit les récompenses : le métabolisme seul ne produit rien, mais manger si.

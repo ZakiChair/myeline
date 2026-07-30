@@ -12,6 +12,7 @@
 // c'est ce qui rend « avant » et « après » distinguables, prérequis de la STDP.
 
 import type { RNG } from "../lib/rng";
+import { gaussTable } from "./bruit";
 import type { LifParams } from "./params";
 import type { Topology } from "./topology";
 
@@ -36,12 +37,6 @@ export interface LifState {
   /** Masque de lésion (lot 3) : 1 = neurone éteint. null = aucune lésion. */
   silenced: Uint8Array | null;
   t: number;
-}
-
-/** Tirage gaussien centré réduit (Box–Muller), déterministe via le RNG fourni. */
-function gauss(rng: RNG): number {
-  const u = Math.max(rng(), 1e-12);
-  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rng());
 }
 
 export function createLif(topo: Topology, p: LifParams): LifState {
@@ -92,7 +87,7 @@ export function stepLif(topo: Topology, st: LifState, p: LifParams, rng: RNG): n
   // et réfractaires : sinon le flux du RNG dépendrait de l'état, et une lésion décalerait
   // tout le bruit du réseau, rendant les comparaisons du lot 3 impossibles.
   for (let i = 0; i < n; i++) {
-    const bruit = p.noise > 0 ? p.noise * gauss(rng) : 0;
+    const bruit = p.noise > 0 ? p.noise * gaussTable(rng) : 0;
     if (sil !== null && sil[i] === 1) {
       st.v[i] = p.vReset;
       continue;

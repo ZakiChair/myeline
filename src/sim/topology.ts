@@ -7,7 +7,8 @@
 //     la mise à l'échelle homéostatique.
 // `inEdge[k]` est l'indice dans `w` de l'arête, c'est-à-dire son indice dans le CSR sortant.
 
-import { mulberry32, randInt, type RNG } from "../lib/rng";
+import { mulberry32, randInt } from "../lib/rng";
+import { gaussTable } from "./bruit";
 import type { Region, RegionId, TopologyParams } from "./params";
 
 export interface Topology {
@@ -58,12 +59,6 @@ const CAPTEURS: ReadonlySet<RegionId> = new Set<RegionId>([
   "SOMA",
   "INTERO",
 ]);
-
-/** Tirage gaussien centré réduit (Box–Muller), déterministe via le RNG fourni. */
-function gauss(rng: RNG): number {
-  const u = Math.max(rng(), 1e-12);
-  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rng());
-}
 
 /** Reste positif : la dalle corticale est torique. */
 function mod(v: number, m: number): number {
@@ -193,9 +188,9 @@ export function buildTopology(p: TopologyParams): Topology {
   /** Tire une cible corticale autour de (cx, cy, cz), en mailles, avec enroulement torique. */
   const cibleCorticale = (cx: number, cy: number, cz: number, sigma: number): number => {
     for (let essai = 0; essai < 8; essai++) {
-      const x = mod(Math.round(cx + gauss(rng) * sigma), l);
-      const y = mod(Math.round(cy + gauss(rng) * sigma), l);
-      const z = mod(Math.round(cz + gauss(rng) * sigma), l);
+      const x = mod(Math.round(cx + gaussTable(rng) * sigma), l);
+      const y = mod(Math.round(cy + gaussTable(rng) * sigma), l);
+      const z = mod(Math.round(cz + gaussTable(rng) * sigma), l);
       const k = (z * l + y) * l + x;
       if (k < nCortex) return ctx.start + k;
     }
