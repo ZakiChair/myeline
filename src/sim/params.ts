@@ -86,7 +86,7 @@ export const TOPOLOGIE_DEFAUT: TopologyParams = {
   fracInh: 0.2,
   delayMax: 8,
   wExc: 0.09,
-  wInh: 0.28,
+  wInh: 1.4,
   wMax: 1.5,
 };
 
@@ -119,5 +119,22 @@ export const LIF_DEFAUT: LifParams = {
   thrBase: 1,
   thrJump: 0.18,
   refrac: 3,
-  noise: 0.02,
+  noise: 0.08,
 };
+
+// ─── Régime calibré ─────────────────────────────────────────────────────────────────────
+//
+// MESURÉ le 2026-07-30 (voir docs/superpowers/notes/2026-07-30-vie-calibration.md), pas
+// choisi. Le réseau par défaut était net-excitateur et saturait à 0,078 décharge/neurone/tick ;
+// wInh porté à 1,4 le rend net-inhibiteur, et noise à 0,08 lui donne une activité spontanée
+// que l'entrée sensorielle peut moduler. Sans cette modulabilité, les capteurs n'auraient
+// aucune prise sur un cortex déjà saturé.
+
+/** Taux du régime ENTRETENU, en décharges par neurone et par tick. Cible de l'homéostasie. */
+export const TAUX_CIBLE = 0.022;
+
+/** Courant de fond retenu à la calibration. Réutilisé par les sondes. */
+export const DRIVE_CALIBRE = 1.0;
+
+/** Taux SPONTANÉ mesuré (sans aucune entrée) — repère, pas une cible. */
+export const TAUX_SPONTANE = 0.009;
