@@ -87,6 +87,34 @@ export function splitHalves(lifetimes: number[]): { first: number[]; second: num
   return { first, second };
 }
 
+/**
+ * Dérive des poids depuis un instantané de référence.
+ *
+ * `bougees` compte les arêtes dont le poids a changé ; `moyenne` est la dérive absolue moyenne
+ * PAR ARÊTE, sur toutes les arêtes et non sur les seules arêtes qui ont bougé — c'est cette
+ * seconde forme qui permet de comparer deux conditions sur la même topologie.
+ *
+ * Sert à distinguer les deux témoins que le lot 1 confondait : « gelé » au sens « pas
+ * d'apprentissage » (l'homéostasie continue de mettre les poids à l'échelle) et « gelé » au sens
+ * « aucun poids ne bouge ».
+ */
+export function derivePoids(
+  topo: { e: number; w: Float32Array },
+  reference: Float32Array,
+): { moyenne: number; bougees: number } {
+  if (reference.length !== topo.e) {
+    throw new Error(`référence de taille ${reference.length}, attendu ${topo.e}`);
+  }
+  let somme = 0;
+  let bougees = 0;
+  for (let e = 0; e < topo.e; e++) {
+    const d = Math.abs(topo.w[e] - reference[e]);
+    if (d > 0) bougees++;
+    somme += d;
+  }
+  return { moyenne: somme / topo.e, bougees };
+}
+
 export function summarize(m: Metrics): Resume {
   const mange = m.ateFood + m.ateToxin;
   return {

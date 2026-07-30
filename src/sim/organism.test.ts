@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { mulberry32 } from "../lib/rng";
 import { createOrganism, runOrganism, stepOrganism } from "./organism";
+import { derivePoids } from "./metrics";
 import { ORGANISME_DEFAUT } from "./params";
 
 const cfg = (over = {}) => ({
@@ -137,4 +138,57 @@ describe("coutures du lot 3", () => {
     // rBar suit les récompenses : le métabolisme seul ne produit rien, mais manger si.
     expect(rBars.some((v) => v !== 0)).toBe(true);
   });
+});
+
+/**
+ * DEUX TÉMOINS DISTINCTS, et le lot 1 les a confondus.
+ *
+ *   - gelé-APPRENTISSAGE : lr = 0, homéostasie ACTIVE  → isole la règle à trois facteurs ;
+ *   - gelé-TOTAL         : lr = 0, homéostasie COUPÉE  → aucun poids ne bouge.
+ *
+ * Le journal du 2026-07-30 a mesuré que l'homéostasie produit 93 à 96 % du mouvement
+ * synaptique. Appeler « gelé » le premier laissait croire au second, et c'est ce qui rendait
+ * la comparaison plastique/gelé ininterprétable.
+ */
+describe("témoins de plasticité", () => {
+  const copiePoids = (org: ReturnType<typeof createOrganism>) => Float32Array.from(org.brain.topo.w);
+
+  it("gelé-total : aucun poids ne bouge quand lr = 0 ET l'homéostasie est coupée", () => {
+    const org = createOrganism(cfg(), { lr: 0, homeostasis: false });
+    const avant = copiePoids(org);
+    runOrganism(org, 3000, mulberry32(7));
+    const d = derivePoids(org.brain.topo, avant);
+    expect(d.bougees).toBe(0);
+    expect(d.moyenne).toBe(0);
+  }, 300_000);
+
+  it("gelé-apprentissage : l'homéostasie SEULE déplace les poids, même à lr = 0", () => {
+    // Épingle le diagnostic mesuré. Sans ce test il peut régresser en silence — et le test
+    // préexistant « ne modifie aucun poids quand lr = 0 » ne l'attrape PAS : il ne tourne que
+    // 400 ticks pour un homeoEvery de 500, donc l'homéostasie n'y est jamais déclenchée.
+    const org = createOrganism(cfg(), { lr: 0, homeostasis: true });
+    const avant = copiePoids(org);
+    runOrganism(org, 3000, mulberry32(7));
+    const d = derivePoids(org.brain.topo, avant);
+    expect(d.bougees).toBeGreaterThan(0);
+    expect(d.moyenne).toBeGreaterThan(0);
+  }, 300_000);
+
+  it("l'homéostasie pèse plus lourd que l'apprentissage — le fait qui a fait échouer le lot 1", () => {
+    // Mesuré au lot 1 : 93 à 96 % du mouvement synaptique vient de l'homéostasie.
+    // On ne réassertionne pas le pourcentage exact (il dépend de la graine et du régime),
+    // mais bien l'ORDRE DE GRANDEUR : le mouvement sous lr = 0 est du même ordre que celui
+    // sous plasticité, alors qu'il devrait être négligeable.
+    const gele = createOrganism(cfg(), { lr: 0, homeostasis: true });
+    const avantGele = copiePoids(gele);
+    runOrganism(gele, 3000, mulberry32(7));
+    const dGele = derivePoids(gele.brain.topo, avantGele);
+
+    const plastique = createOrganism(cfg(), { homeostasis: true });
+    const avantPlast = copiePoids(plastique);
+    runOrganism(plastique, 3000, mulberry32(7));
+    const dPlast = derivePoids(plastique.brain.topo, avantPlast);
+
+    expect(dGele.moyenne).toBeGreaterThan(dPlast.moyenne * 0.5);
+  }, 300_000);
 });

@@ -44,6 +44,19 @@ export interface OrganismOptions {
   onEvent?: (ev: OrganismEvent) => void;
   /** Masque de neurones éteints (protocole 4). */
   lesion?: Uint8Array | null;
+  /**
+   * Coupe la mise à l'échelle homéostatique. Défaut : true (active), donc rétro-compatible.
+   *
+   * DEUX TÉMOINS DISTINCTS, que le lot 1 confondait :
+   *   - gelé-APPRENTISSAGE : lr = 0, homeostasis = true  → isole la règle à trois facteurs ;
+   *   - gelé-TOTAL         : lr = 0, homeostasis = false → aucun poids ne bouge.
+   *
+   * Mesuré le 2026-07-30 : l'homéostasie produit 93 à 96 % du mouvement synaptique. Appeler
+   * « gelé » le premier laissait croire au second, ce qui privait la comparaison de son sens.
+   * On ne conditionne PAS l'homéostasie par `lr` : cela ferait du témoin un modèle différent
+   * (sans mécanisme de stabilité) au lieu du même modèle sans apprentissage.
+   */
+  homeostasis?: boolean;
 }
 
 export interface Organism {
@@ -118,7 +131,7 @@ export function stepOrganism(org: Organism, rng: RNG): { action: MotorAction | n
   const plast = org.brain.params.plasticity;
   addDopamine(org.brain.topo, org.brain.lif, org.brain.plast, plast, da);
 
-  if (org.brain.lif.t % plast.homeoEvery === 0) {
+  if (org.options.homeostasis !== false && org.brain.lif.t % plast.homeoEvery === 0) {
     homeostasis(org.brain.topo, org.brain.lif, org.brain.plast, plast, TAUX_HOMEO);
   }
 
