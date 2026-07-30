@@ -396,7 +396,7 @@ direct) :
 // Topologie du cerveau « Vie » : régions, dalle corticale torique, CSR bidirectionnel.
 // Pur et déterministe : même graine ⇒ même câblage.
 
-import { mulberry32, randInt, type RNG } from "@/lib/rng";
+import { mulberry32, randInt, type RNG } from "../lib/rng";
 import type { Region, RegionId, TopologyParams } from "./params";
 
 /** Tirage gaussien centré réduit (Box–Muller), déterministe via le RNG fourni. */
@@ -537,7 +537,7 @@ Le délai minimal étant 1, une décharge du tick `t` ne peut jamais être conso
 ```ts
 // src/sim/lif.test.ts
 import { describe, it, expect } from "vitest";
-import { mulberry32 } from "@/lib/rng";
+import { mulberry32 } from "../lib/rng";
 import { buildTopology } from "./topology";
 import { createLif, stepLif, meanRate } from "./lif";
 import { LIF_DEFAUT, TOPOLOGIE_DEFAUT } from "./params";
@@ -724,7 +724,7 @@ régime stable. C'est la mitigation nommée dans le tableau des risques de la co
 // pas, SANS plasticité. Les seuils de ce fichier sont issus de la mesure (étape 3), jamais
 // d'une intuition.
 import { describe, it, expect } from "vitest";
-import { mulberry32 } from "@/lib/rng";
+import { mulberry32 } from "../lib/rng";
 import { buildTopology } from "./topology";
 import { createLif, stepLif } from "./lif";
 import { LIF_DEFAUT, TOPOLOGIE_DEFAUT } from "./params";
@@ -926,7 +926,7 @@ neurone se compterait elle-même et la LTD dégénérerait en anti-Hebb sur un s
 ```ts
 // src/sim/plasticity.test.ts
 import { describe, it, expect } from "vitest";
-import { mulberry32 } from "@/lib/rng";
+import { mulberry32 } from "../lib/rng";
 import { buildTopology } from "./topology";
 import { createLif, stepLif } from "./lif";
 import { createPlasticity, accumulateEligibility, addDopamine, homeostasis } from "./plasticity";
@@ -1237,7 +1237,7 @@ une punition. Ne surtout pas rendre l'un plus intense que l'autre.
 ```ts
 // src/sim/world.test.ts
 import { describe, it, expect } from "vitest";
-import { mulberry32 } from "@/lib/rng";
+import { mulberry32 } from "../lib/rng";
 import { createWorld, sense, stepWorld } from "./world";
 import { MONDE_DEFAUT } from "./params";
 
@@ -1512,7 +1512,7 @@ preuve s'accumule, puis bascule.
 ```ts
 // src/sim/brain.test.ts
 import { describe, it, expect } from "vitest";
-import { mulberry32 } from "@/lib/rng";
+import { mulberry32 } from "../lib/rng";
 import { createBrain, encodeSensation, stepBrain, motorAccumulators } from "./brain";
 import { regionById, poolRange } from "./topology";
 import { CERVEAU_DEFAUT, ACTIONS } from "./params";
@@ -1841,7 +1841,7 @@ describe("summarize", () => {
 ```ts
 // src/sim/organism.test.ts
 import { describe, it, expect } from "vitest";
-import { mulberry32 } from "@/lib/rng";
+import { mulberry32 } from "../lib/rng";
 import { createOrganism, stepOrganism, runOrganism } from "./organism";
 import { ORGANISME_DEFAUT } from "./params";
 
@@ -2006,7 +2006,7 @@ et elle conditionne la faisabilité de la tâche 9 (qui a besoin de beaucoup de 
 // src/sim/bench.probe.test.ts
 // Banc de mesure : combien de ticks par seconde, et où part le temps ?
 import { describe, it, expect } from "vitest";
-import { mulberry32 } from "@/lib/rng";
+import { mulberry32 } from "../lib/rng";
 import { createOrganism, runOrganism } from "./organism";
 import { ORGANISME_DEFAUT } from "./params";
 
@@ -2099,7 +2099,7 @@ paramètres déguisée en débogage — c'est le piège que ce plan interdit exp
 // Les seuils de ce fichier sont issus de la mesure de l'étape 3. Aucun nombre n'y est écrit
 // avant d'avoir été observé.
 import { describe, it, expect } from "vitest";
-import { mulberry32 } from "@/lib/rng";
+import { mulberry32 } from "../lib/rng";
 import { createOrganism, runOrganism } from "./organism";
 import { median, splitHalves, summarize } from "./metrics";
 import { ORGANISME_DEFAUT } from "./params";
