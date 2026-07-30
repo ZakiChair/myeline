@@ -79,6 +79,10 @@ export interface Organism {
    *
    * Pour un taux PAR RÉGION, sommer `lif.spikeTotal[i]` sur les neurones de la région — c'est
    * ce que fait `organism.probe.test.ts`, et c'est la mesure juste.
+   *
+   * ⚠️ SANS AUCUN LECTEUR dans le dépôt à la fin du lot 0 : il n'est écrit que par `stepOrganism`.
+   * Le lot 1 doit trancher — lui donner un consommateur, ou le supprimer. Laissé en place ici
+   * parce que c'est une décision de périmètre, pas une correction du lot 0.
    */
   spikesReseau: number;
 }

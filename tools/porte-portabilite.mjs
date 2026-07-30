@@ -19,6 +19,11 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+// L'outil tourne 20 000 ticks pour rester rapide. ⚠️ LA MESURE DE RÉFÉRENCE DU LOT 0 EST À
+// 150 000 TICKS — huit fois au-delà du point de divergence historique (tick ≈ 17 942), et c'est
+// elle qui porte la conclusion. Empreinte attendue à 150 000 : 89bf8248:179/150/180/252 sous les
+// deux moteurs. Voir la section « Lot 0 » de docs/superpowers/notes/2026-07-30-vie-calibration.md.
+// Pour la rejouer, changer cette constante ; un run coûte quelques dizaines de secondes.
 const TICKS = 20_000;
 
 // L'entrée vit dans le répertoire temporaire, jamais dans le dépôt : ses imports sont donc
