@@ -207,6 +207,30 @@ Le ratio toxine inférieur à 0,5 alors qu'il y a autant de toxines que de nourr
 *suggestif* mais ne prouve rien : c'est précisément ce que la tâche 9 doit établir en
 comparant début et fin d'expérience, et ce que les témoins du lot 3 devront confirmer.
 
+## Tâche 8 — débit et budget CPU (2026-07-30)
+
+Organisme complet en boucle fermée (LIF + éligibilité + dopamine + homéostasie + monde) :
+
+| n | arêtes | ticks/s |
+|---|---|---|
+| 2 500 | 148 992 | 7 493 |
+| 10 000 | 597 504 | 1 642 |
+| 50 000 | 2 987 520 | **304** |
+
+Part du balayage dopaminergique, mesurée en divisant sa cadence par 16
+(`dumpEvery` 16 → 256) : 1 662 → 2 013 ticks/s, soit **≈ 17 % du temps**.
+
+Deux décisions en découlent :
+
+- **Aucune optimisation n'est faite.** 304 ticks/s à pleine échelle dépasse le seuil de
+  200 ticks/s que le plan fixait comme condition pour ne rien toucher : le lot 2 pourra faire
+  tourner la simulation en temps réel dans un worker.
+- **Le repli sur un registre d'arêtes touchées n'est PAS implémenté.** La conception le
+  prévoyait au cas où le balayage dominerait le budget ; à 17 %, il ne domine pas. Écrire ce
+  repli aurait ajouté un chemin de code et un test d'équivalence pour un gain marginal.
+
+Pour la tâche 9 : à n = 2 500, une expérience de 400 000 ticks prend environ 53 s par graine.
+
 ### Question ouverte à vérifier au lot 2
 
 L'équilibre excitation/inhibition repose désormais surtout sur l'**amplitude** des poids
