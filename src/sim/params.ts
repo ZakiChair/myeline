@@ -202,3 +202,66 @@ export const PLASTICITE_DEFAUT: PlasticityParams = {
  * la tâche 7 la corrigera en mesurant le taux cortical réellement vécu par l'organisme.
  */
 export const TAUX_HOMEO = 0.012;
+
+// ─── Le monde et l'enjeu ────────────────────────────────────────────────────────────────
+//
+// Un pas de monde = un tick de cerveau. L'organisme ne peut pas mettre le temps en pause en
+// hésitant : c'est ce qui rend l'hésitation coûteuse, donc ce qui donne un sens à la course
+// au seuil du décodage moteur.
+
+export interface WorldParams {
+  /** Demi-côté de l'arène carrée. */
+  arena: number;
+  nFood: number;
+  nToxin: number;
+  /** Rayon d'absorption d'une pastille. */
+  foodRadius: number;
+  energyMax: number;
+  energyStart: number;
+  gainFood: number;
+  lossToxin: number;
+  lossPredator: number;
+  rFood: number;
+  rToxin: number;
+  rPredator: number;
+  /** Coût métabolique par tick, au repos et en déplacement. */
+  metabRest: number;
+  metabMove: number;
+  stepLen: number;
+  /** Rotation par action, en radians. */
+  turnStep: number;
+  predatorSpeed: number;
+  /** Distance en deçà de laquelle le prédateur poursuit. */
+  predatorSense: number;
+  predatorContact: number;
+  /** Portée de l'émission ALARM. Bien plus grande que le contact : la fuite est apprenable. */
+  alarmRange: number;
+  olfRange: number;
+  /** Ticks avant réapparition d'une pastille consommée. */
+  respawnEvery: number;
+}
+
+export const MONDE_DEFAUT: WorldParams = {
+  arena: 120,
+  nFood: 14,
+  nToxin: 14,
+  foodRadius: 5,
+  energyMax: 100,
+  energyStart: 60,
+  gainFood: 22,
+  lossToxin: 30,
+  lossPredator: 45,
+  rFood: 1,
+  rToxin: -1.4,
+  rPredator: -2,
+  metabRest: 0.05,
+  metabMove: 0.18,
+  stepLen: 1.4,
+  turnStep: 0.22,
+  predatorSpeed: 0.9,
+  predatorSense: 55,
+  predatorContact: 6,
+  alarmRange: 90,
+  olfRange: 70,
+  respawnEvery: 240,
+};
