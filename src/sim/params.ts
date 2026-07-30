@@ -265,3 +265,34 @@ export const MONDE_DEFAUT: WorldParams = {
   olfRange: 70,
   respawnEvery: 240,
 };
+
+// ─── Cerveau : encodage sensoriel et décision ───────────────────────────────────────────
+
+export interface BrainParams {
+  topology: TopologyParams;
+  lif: LifParams;
+  plasticity: PlasticityParams;
+  /** Conversion intensité perçue [0,1] → courant injecté dans le pool sensoriel. */
+  injectGain: number;
+  /** Fuite de l'accumulateur moteur, par tick. */
+  accLeak: number;
+  /** Conversion de la fraction du pool ayant déchargé → preuve accumulée. */
+  accGain: number;
+  /** Seuil de décision : le premier pool à le franchir gagne. */
+  accSeuil: number;
+  /** Ticks au-delà desquels une action par défaut est forcée. */
+  accTimeout: number;
+  accDefault: MotorAction;
+}
+
+export const CERVEAU_DEFAUT: BrainParams = {
+  topology: TOPOLOGIE_DEFAUT,
+  lif: LIF_DEFAUT,
+  plasticity: PLASTICITE_DEFAUT,
+  injectGain: 0.35,
+  accLeak: 0.06,
+  accGain: 1.0,
+  accSeuil: 2.5,
+  accTimeout: 60,
+  accDefault: "AVANCER",
+};
