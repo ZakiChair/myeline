@@ -231,6 +231,84 @@ Deux décisions en découlent :
 
 Pour la tâche 9 : à n = 2 500, une expérience de 400 000 ticks prend environ 53 s par graine.
 
+## Tâche 9 — apprentissage : RÉSULTAT NÉGATIF (2026-07-30)
+
+**L'organisme n'apprend pas de façon démontrable.** Le lot 1 livre un noyau qui vit, décide,
+mange, meurt et se mesure — mais la porte d'apprentissage n'est **pas** franchie. Ce qui suit
+est la mesure, pas une excuse.
+
+### La mesure
+
+400 000 ticks, n = 2 500, trois graines, huit tranches d'expérience :
+
+| graine | vies | médiane 1re moitié | 2e moitié | ratio toxine début → fin |
+|---|---|---|---|---|
+| 1 | 621 | 451 | 574 (×1,27) | 0,303 → 0,277 |
+| 2 | 822 | 381 | 391 (×1,03) | 0,491 → 0,526 |
+| 3 | 744 | 387 | 468 (×1,21) | 0,377 → 0,386 |
+
+Médianes par tranche, graine 1 : 378, 414, 526, 576, 456, **786**, 317, 814. La dispersion
+inter-tranches est du même ordre que l'écart entre moitiés, et la graine 2 est parfaitement
+plate. Le ratio toxine ne baisse sur aucune graine de façon nette — il *monte* sur la graine 2.
+
+Un écart entre deux moitiés sur deux graines sur trois, sans monotonie par tranche et sans
+signal sur le ratio toxine, ne se distingue pas du hasard. Écrire une assertion `×1,2` ici
+produirait un test qui passe pour de mauvaises raisons.
+
+### Trois hypothèses testées, aucune concluante
+
+**1. La dopamine tonique noie le signal phasique.** `da = r − rBar` est émis à *chaque* tick ;
+entre deux récompenses `r = 0`, donc `da = −rBar` en permanence, soit ≈ −0,03 par déversement
+appliqué à toute l'éligibilité. Cumulé, c'est du même ordre que le signal utile, 30× plus fort
+mais 25× plus rare. Testé via la couture `dopamineSource`, **sans modifier le noyau** :
+
+| régime | graine 1 | graine 2 |
+|---|---|---|
+| tonique (défaut) | 406 → 574 | 416 → 358 |
+| phasique `r − rBar` | 575 → 695 | 371 → 371 |
+| phasique `r` brut | 715 → **596** | 406 → 367 |
+
+Aucun régime ne dégage de progression ; le phasique brut *descend* sur la graine 1.
+
+**2. La fenêtre de crédit est trop courte.** Écartée par le calcul : la décision qui mène à
+une ingestion précède celle-ci d'au plus l'intervalle entre décisions, mesuré à ~20 ticks,
+alors que `tauElig` vaut 60. Le crédit a matériellement le temps d'arriver.
+
+**3. Il manque une copie d'efférence.** C'est l'hypothèse la plus solide. Les quatre pools
+moteurs déchargent à des taux voisins (~0,012) : **rien dans l'activité du réseau ne distingue
+le pool qui a gagné la course de ses trois concurrents**. La règle à trois facteurs crédite
+donc les quatre uniformément, et aucune action ne peut être renforcée préférentiellement.
+
+Implémentation testée — une bouffée injectée dans le pool gagnant au franchissement — et
+**rejetée** : elle relance immédiatement ce pool, qui refranchit le seuil au tick suivant. La
+décision se verrouille sur elle-même, l'organisme cesse de se déplacer (vie médiane 1201, soit
+exactement le métabolisme de repos) et ne mange plus rien (`ratio toxine = NaN`). Le mécanisme
+a été retiré du code plutôt que laissé désactivé.
+
+Une copie d'efférence viable devrait marquer le pool gagnant **sans** réalimenter son
+accumulateur — par exemple une trace de plasticité dédiée plutôt qu'un courant, ou une période
+réfractaire de décision après chaque franchissement.
+
+### Ce que le lot 1 établit malgré tout
+
+Le fichier `apprentissage.probe.test.ts` n'affirme aucun apprentissage. Il vérifie ce qui est
+réellement acquis, et c'est ce qui rend le résultat négatif interprétable :
+
+- l'expérience a de la matière (> 30 morts, > 20 nourritures, > 5 toxines sur 100 000 ticks,
+  et les deux moitiés contiennent chacune assez de vies pour être comparées) ;
+- elle est reproductible au bit près pour une graine donnée.
+
+Sans ces garanties, on ne saurait pas distinguer « l'organisme n'apprend pas » de « l'organisme
+n'a rien vécu ». C'est la différence entre un résultat négatif et une absence de résultat.
+
+### Suite
+
+Ce projet a déjà documenté un mur du crédit plutôt que de le maquiller ; la même exigence
+s'applique ici. Le lot 2 (worker et rendu) peut démarrer sur ce noyau — il rendra visible un
+organisme qui vit sans encore apprendre. Le lot 3 devra commencer par le crédit d'action, et
+son protocole *yoked* prend d'ailleurs tout son sens : il distinguera « apprendre » de
+« recevoir du signal » sur un système dont on sait déjà qu'il reçoit du signal sans apprendre.
+
 ### Question ouverte à vérifier au lot 2
 
 L'équilibre excitation/inhibition repose désormais surtout sur l'**amplitude** des poids
