@@ -146,3 +146,59 @@ export const DRIVE_CALIBRE = 1.0;
 
 /** Taux SPONTANÉ mesuré (sans aucune entrée) — repère, pas une cible. */
 export const TAUX_SPONTANE = 0.009;
+
+// ─── Plasticité à trois facteurs ────────────────────────────────────────────────────────
+
+export interface PlasticityParams {
+  /** Décroissance des traces de décharge, en ticks. */
+  tauPre: number;
+  tauPost: number;
+  /** Décroissance de l'éligibilité, en ticks : la fenêtre de crédit temporel. */
+  tauElig: number;
+  /** Amplitude de la potentialisation (pré avant post). */
+  aPlus: number;
+  /** Amplitude de la dépression (post avant pré). */
+  aMinus: number;
+  /** Taux d'apprentissage. 0 = témoin gelé. */
+  lr: number;
+  /** Cadence du déversement dopaminergique, en ticks. */
+  dumpEvery: number;
+  /** |dopamine accumulée| au-delà de laquelle on déverse sans attendre la cadence. */
+  dumpNow: number;
+  /** Cadence de l'homéostasie, en ticks. */
+  homeoEvery: number;
+  /** Vigueur de la mise à l'échelle homéostatique. */
+  homeoRate: number;
+  /** Borne du facteur multiplicatif par passage (0,05 → [0,95 ; 1,05]). */
+  homeoClamp: number;
+  /** Doit valoir TopologyParams.wMax ; createBrain le vérifie. */
+  wMax: number;
+}
+
+export const PLASTICITE_DEFAUT: PlasticityParams = {
+  tauPre: 20,
+  tauPost: 20,
+  tauElig: 60,
+  aPlus: 0.012,
+  // Légèrement inférieur à aPlus : le choix standard qui évite la dérive vers zéro d'un
+  // réseau à activité irrégulière.
+  aMinus: 0.0105,
+  lr: 0.05,
+  dumpEvery: 16,
+  dumpNow: 0.6,
+  homeoEvery: 500,
+  homeoRate: 0.15,
+  homeoClamp: 0.05,
+  wMax: 3.0,
+};
+
+/**
+ * Cible de l'homéostasie, en décharges par neurone et par tick.
+ *
+ * DISTINCT de TAUX_CIBLE (le régime entretenu) : l'homéostasie doit viser la moyenne
+ * réellement vécue par un neurone, pas le pic sous stimulation. Viser le régime entretenu
+ * potentialiserait sans fin les territoires momentanément silencieux, jusqu'à les faire
+ * décharger sans entrée. Valeur provisoire entre spontané (0,009) et entretenu (0,022) ;
+ * la tâche 7 la corrigera en mesurant le taux cortical réellement vécu par l'organisme.
+ */
+export const TAUX_HOMEO = 0.012;

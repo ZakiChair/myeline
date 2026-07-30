@@ -110,6 +110,39 @@ une saturation locale.
 Un neurone est dit « chaud » quand son taux dépasse 0,15, soit 60 % du plafond imposé par le
 réfractaire (1/(refrac+1) = 0,25).
 
+## Tâche 4 — régime sous plasticité (2026-07-30)
+
+Plasticité et homéostasie actives, dopamine aléatoire de moyenne nulle, 5 000 ticks à
+n = 3 000. Profil du taux par fenêtre de 200 ticks :
+
+`0,0257 → 0,0226 → 0,0219 → … → 0,0207 → 0,0209 → 0,0193`
+
+Ni crise ni extinction, aucun poids non fini. La légère décroissance est le fait de
+l'homéostasie, qui ramène le réseau vers `TAUX_HOMEO`.
+
+### Pourquoi la cible de l'homéostasie n'est pas le régime entretenu
+
+`TAUX_HOMEO = 0,012` est **distinct** de `TAUX_CIBLE = 0,022`. L'homéostasie doit viser la
+moyenne qu'un neurone vit réellement, pas son pic sous stimulation. Avec 0,022 pour cible, un
+territoire momentanément silencieux (à 0,009) aurait vu ses poids entrants multipliés par
+1 + 0,15 × (0,022 − 0,009)/0,022 = **1,0375 à chaque passage**, soit ×1,56 sur 6 000 ticks et
+sans point d'arrêt : les afférences auraient enflé jusqu'à faire décharger la région sans
+aucune entrée. L'organisme aurait halluciné ses capteurs.
+
+Mesure avec `TAUX_HOMEO = 0,012`, une seule modalité stimulée pendant 6 000 ticks :
+
+| territoire | poids entrant moyen avant | après | facteur |
+|---|---|---|---|
+| stimulé (`OLF_FOOD`, pools 5-7) | 0,1190 | 0,0969 | ×0,814 |
+| silencieux (`ALARM`) | 0,1119 | 0,1357 | ×1,213 |
+
+La régulation joue **dans les deux sens** et s'atténue : ×1,213 observé contre ×1,56 si
+l'effet était resté constant, ce qui montre que le territoire silencieux converge vers la
+cible au lieu de diverger.
+
+Cette valeur reste provisoire : la tâche 7 mesurera le taux cortical réellement vécu par
+l'organisme dans son monde et la corrigera si besoin.
+
 ### Question ouverte à vérifier au lot 2
 
 L'équilibre excitation/inhibition repose désormais surtout sur l'**amplitude** des poids
