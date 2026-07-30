@@ -282,12 +282,19 @@ non physiologique pour gagner du temps machine.
 
 | | à 10 ms/tick | **à 1 ms/tick** |
 |---|---|---|
-| essai PER complet | 1 800 ticks | 18 000 ticks |
-| protocole d'acquisition (7 essais × 40 sujets × 2 groupes) | 1,01 M ticks | **10,1 M ticks** |
-| temps mur à n = 2 500 | 2,2 min | **22 min** |
-| `tauElig` requis | 250 | ≈ 2 500 |
+| `tauElig` requis pour franchir l'ISI | 250 | **≈ 2 500** |
+| intervalle inter-essais minimal (4 × `tauElig`) | 1 000 | **≥ 10 000** |
+| essai PER complet | 1 800 ticks | **22 000 ticks** |
+| protocole d'acquisition (7 essais × 40 sujets × 2 groupes) | 1,01 M ticks | **12,3 M ticks** |
+| temps mur à n = 2 500 | 2,2 min | **≈ 27 min** |
 
-**22 minutes par protocole est acceptable** — c'est le même ordre que les 53 s × 3 graines + réglages
+⚠️ **La contrainte sur l'intervalle inter-essais est ce qui fixe la durée de l'essai, et elle se
+déplace avec `dt`.** À 10 ms, un intervalle de 800 ticks suffisait largement (4 × 250 = 1 000… déjà
+juste) ; à 1 ms il faut **≥ 10 000 ticks**, donc 12 000 avec marge, et l'essai passe de 18 000 à
+22 000 ticks. C'est le genre de couture qu'un changement d'horloge casse silencieusement : la garde
+doit être **calculée depuis `tauElig`**, jamais écrite en dur.
+
+**≈ 27 minutes par protocole est acceptable** — c'est le même ordre que les 53 s × 3 graines + réglages
 du lot 1, pour un résultat falsifiable au lieu d'un signal faible. Le coût de la LUT de décroissance
 passe de 241 à ≈ 10 001 entrées (`plasticity.ts:49`) : en O(τ), pas en O(arêtes), donc négligeable.
 En revanche `dumpEvery = 16` devient absurdement fréquent face à une fenêtre de 2 500 ticks et doit
@@ -523,8 +530,13 @@ comprimé** :
 | US, début à CS + 3 000 | — | **ISI 3 s — conforme** |
 | US (sucrose) | 3 000 | **3 s — conforme**, chevauchement 1 s |
 | après | 2 000 | 2 s (comprimé de 25 s) |
-| **ITI** | **8 000** | **8 s — comprimé de 600 s, facteur 75** |
-| **total** | **18 000** | 18 s |
+| **ITI** | **12 000** | **12 s — comprimé de 600 s, facteur 50** |
+| **total** | **22 000** | 22 s |
+
+L'ITI de 12 000 ticks n'est pas un choix esthétique : c'est la borne `4 × tauElig` = 10 000, plus une
+marge. **Cette valeur doit être calculée depuis `tauElig` dans le code, pas écrite en dur** — sinon un
+futur ajustement de la fenêtre de crédit rendrait les essais silencieusement dépendants les uns des
+autres, chaque essai héritant de l'éligibilité du précédent.
 
 **La compression de l'ITI est la principale concession de fidélité du banc, et elle a une
 conséquence à déclarer** : elle place le banc en régime **massé**, alors que l'espacé (ITI 10 min)
@@ -545,7 +557,7 @@ synaptique. Porter `tauElig` à ≈ 2 500 et **mesurer** que l'éligibilité fra
 **Aucune fiche avant cela** : le lot 1 a démontré ce qui arrive quand on mesure un apprentissage sous
 une homéostasie qui produit 95 % du mouvement.
 
-**Rang 1 — PER appétitif.** ≈ 22 min à n = 2 500. Porte : à l'essai 5, la proportion de répondants
+**Rang 1 — PER appétitif.** ≈ 27 min à n = 2 500 (12,3 M ticks). Porte : à l'essai 5, la proportion de répondants
 est strictement supérieure dans le groupe apparié que dans le groupe **non apparié explicite** (5
 odeurs seules + 5 sucroses seuls en séquence pseudo-aléatoire — le témoin publié), Fisher exact
 p < 0,01, 40 sujets/groupe. Deux témoins supplémentaires gratuits : **appariement inversé** (US avant
@@ -579,7 +591,8 @@ donnaient 53 % de réponse relative, soit ce que la biologie donne pour deux ode
 seul carbone**. Mon espace d'odeurs est donc beaucoup trop confusable. C'est exactement ce que cette
 fiche corrige.
 
-**Rang 3 — Réflexe d'extension du dard (SER), aversif.** ≈ 25 min. Protocole (**publié**, Vergoz
+**Rang 3 — Réflexe d'extension du dard (SER), aversif.** ≈ 26 min (essai de 21 000 ticks : le CS de
+5 s est plus long, mais l'US finit exactement à l'extinction du CS). Protocole (**publié**, Vergoz
 et al. 2007) : CS odeur **5 s**, US choc **7,5 V / 60 Hz / 2 s**, ISI 3 s, 6 essais, notation
 **pendant les 2 s du choc** — donc la fenêtre de notation est un paramètre du protocole, pas une
 constante du cerveau. Apparié F(5,190) = 8,46 p < 0,0001 ; non apparié F(5,185) = 2,19 non
@@ -913,7 +926,7 @@ olfactive, pas un animal. À écrire ainsi dans l'interface.
 | **Le sens de la plasticité KC → MBON** | **élevée** | Chez la drosophile, l'apprentissage appétitif **déprime** la synapse vers le neurone de sortie porteur de l'évitement. Mes sondes ont potentialisé. **Le sens doit venir de la littérature abeille avant l'implémentation**, pas d'un choix de commodité. |
 | Mon espace d'odeurs est trop confusable | moyenne | Établi : deux odeurs indépendantes de la sonde 5.1 donnent 53 %, ce que la biologie donne pour un écart d'un seul carbone. La fiche de généralisation (rang 2) est le correctif, et elle doit passer avant les fiches à deux odeurs. |
 | La règle de décision (réponse → probabilité de comportement) | moyenne | Son seuil vient d'un taux spontané **publié** ; son bruit est l'un des deux paramètres ajustés déclarés. Le taux spontané exact n'a **pas été retrouvé** dans les sources : à calibrer comme le régime l'a été au lot 1, et la porte porte sur le **contraste**, pas sur un niveau absolu. |
-| La compression de l'ITI (facteur 75) | moyenne | Déclarée en §6.2, avec sa conséquence : la mémoire à long terme espacée sort du périmètre. Vérifier que l'ITI comprimé reste > 4 × `tauElig`. |
+| La compression de l'ITI (facteur 50) | moyenne | Déclarée en §6.2, avec sa conséquence : la mémoire à long terme espacée sort du périmètre. La borne `ITI ≥ 4 × tauElig` est **satisfaite** (12 000 ≥ 10 000) et doit être **calculée dans le code**, jamais écrite en dur : c'est précisément la couture qu'un changement d'horloge a déjà cassée une fois dans la rédaction de ce document. |
 | Perte du parcours `/theorie` | faible | Inchangé. Le « mur du crédit » garde toute sa valeur — et le §4 explique enfin *de combien* la fenêtre était trop courte. |
 
 ### Deux affirmations du journal de calibration à corriger
@@ -939,7 +952,7 @@ plutôt que laissés :
 
 1. **Le mot « abeille » avant le lot 3.** Assume-t-on de dire « voie olfactive d'abeille » jusqu'au
    lot 3, ou faut-il l'échelle complète avant d'employer le mot ?
-2. **`dt = 1 ms` ou 10 ms.** À 1 ms le neurone est physiologique et un protocole coûte ≈ 22 min à
+2. **`dt = 1 ms` ou 10 ms.** À 1 ms le neurone est physiologique et un protocole coûte ≈ 27 min à
    n = 2 500 ; à 10 ms il coûte 2,2 min mais la membrane devient dix fois trop lente. Je recommande
    1 ms — la refonte perd son sens si le neurone cesse d'être réaliste pour gagner du temps machine.
 3. **L'arène actuelle.** Devient-elle un harnais parmi d'autres (ma recommandation : rien n'est
