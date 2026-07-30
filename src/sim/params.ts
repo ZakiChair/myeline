@@ -230,8 +230,22 @@ export interface WorldParams {
   metabRest: number;
   metabMove: number;
   stepLen: number;
-  /** Rotation par action, en radians. */
-  turnStep: number;
+  /**
+   * Rotation par action, sous forme de cosinus et sinus PRÉCALCULÉS — et non d'un angle.
+   *
+   * `Math.cos` et `Math.sin` ne sont pas spécifiés au bit près par ECMAScript. Mesuré le
+   * 2026-07-30 en exécutant le même bundle sous V8 et sous JSC : le réseau reste bit-identique
+   * à n = 50 000 sur 400 000 ticks, mais l'organisme divergeait dès le tick ≈ 17 942 — parce
+   * que ces fonctions alimentaient, ici, des comparaisons de seuil et des index de secteur
+   * ENTIERS, que rien ne rattrape.
+   *
+   * Le cap est donc un VECTEUR UNITAIRE, tourné par cette paire. Une rotation n'utilise que
+   * des multiplications et des additions, exactement spécifiées.
+   *
+   * Valeurs de 0,06 rad, l'angle mesuré à la tâche 7 du lot 1.
+   */
+  turnCos: number;
+  turnSin: number;
   predatorSpeed: number;
   /** Distance en deçà de laquelle le prédateur poursuit. */
   predatorSense: number;
@@ -259,7 +273,9 @@ export const MONDE_DEFAUT: WorldParams = {
   metabRest: 0.05,
   metabMove: 0.1,
   stepLen: 1.4,
-  turnStep: 0.06,
+  // cos(0,06) et sin(0,06), calculés une fois et inscrits en littéraux.
+  turnCos: 0.99820053993520419,
+  turnSin: 0.059964006479444595,
   predatorSpeed: 0.9,
   predatorSense: 35,
   predatorContact: 6,

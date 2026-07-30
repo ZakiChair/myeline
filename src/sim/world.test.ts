@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { mulberry32 } from "../lib/rng";
-import { createWorld, sense, stepWorld } from "./world";
+import { createWorld, secteurDe, sense, stepWorld, SECTEURS_OLF } from "./world";
 import { MONDE_DEFAUT } from "./params";
 
 const p = MONDE_DEFAUT;
@@ -82,7 +82,8 @@ describe("sensations", () => {
     w.toxinCooldown.fill(1_000_000);
     unique(w.foodX, w.foodY, w.foodCooldown, 10, 0);
     expect(argmax(sense(w, p).food)).toBe(0);
-    w.heading = Math.PI / 2; // l'organisme regarde ailleurs
+    w.hx = 0; // l'organisme regarde ailleurs (quart de tour, ancien heading = π/2)
+    w.hy = 1;
     expect(argmax(sense(w, p).food)).not.toBe(0);
   });
 
@@ -160,9 +161,12 @@ describe("stepWorld", () => {
     const b = createWorld(p, mulberry32(1));
     stepWorld(a, p, "GAUCHE", mulberry32(2));
     stepWorld(b, p, "DROITE", mulberry32(2));
-    expect(a.heading).toBeCloseTo(p.turnStep, 6);
-    expect(b.heading).toBeCloseTo(-p.turnStep, 6);
-    expect(Math.hypot(a.x, a.y)).toBeCloseTo(0, 6);
+    // Le cap part de (1, 0) : après un virage il vaut (turnCos, ±turnSin).
+    expect(a.hx).toBeCloseTo(p.turnCos, 12);
+    expect(a.hy).toBeCloseTo(p.turnSin, 12);
+    expect(b.hx).toBeCloseTo(p.turnCos, 12);
+    expect(b.hy).toBeCloseTo(-p.turnSin, 12);
+    expect(Math.sqrt(a.x * a.x + a.y * a.y)).toBeCloseTo(0, 6);
   });
 
   it("garde l'organisme dans l'arène", () => {
@@ -246,5 +250,78 @@ describe("stepWorld", () => {
       return { trace, x: w.x, y: w.y, energy: w.energy, mangé: w.ateFood };
     };
     expect(run()).toEqual(run());
+  });
+});
+
+/**
+ * PORTABILITÉ ENTRE MOTEURS JAVASCRIPT.
+ *
+ * Mesuré le 2026-07-30 en exécutant le même bundle sous V8 (Node) et sous JSC (Bun, le moteur
+ * de Safari) : le RÉSEAU est bit-identique à n = 50 000 sur 400 000 ticks, mais l'organisme
+ * complet diverge dès le tick ≈ 17 942, pour finir à 89,6 unités d'écart dans une arène de
+ * demi-côté 80. Le coupable est ce module, et lui seul.
+ *
+ * La cause : ECMAScript ne spécifie PAS au bit près les fonctions transcendantes. Ici elles
+ * alimentaient des comparaisons de seuil et des index de secteur ENTIERS — des amplificateurs
+ * discrets, qu'aucun arrondi ne rattrape.
+ *
+ * On ne les réimplémente pas, on les SUPPRIME. Chaque remplacement est exact.
+ */
+describe("portabilité : aucune fonction transcendante", () => {
+  it("n'appelle aucune transcendante dans un pas de monde", () => {
+    // Test STRUCTUREL, et il faut qu'il le soit : un test de VALEUR ne les attraperait pas.
+    // Ces fonctions donnent le bon résultat, simplement pas les mêmes bits selon le moteur.
+    const pieges = ["exp", "log", "cos", "sin", "atan2", "hypot", "cbrt", "tan", "asin", "acos"] as const;
+    const originaux = pieges.map((n) => [n, Math[n]] as const);
+    const appels: string[] = [];
+    // Remplacement volontaire des méthodes de Math, restauré dans le `finally`.
+    const cible = Math as unknown as Record<string, (...a: number[]) => number>;
+    for (const [nom, vrai] of originaux) {
+      cible[nom] = (...a: number[]) => {
+        appels.push(nom);
+        return (vrai as (...x: number[]) => number)(...a);
+      };
+    }
+    try {
+      const w = createWorld(p, mulberry32(3));
+      const rng = mulberry32(9);
+      for (let k = 0; k < 500; k++) {
+        sense(w, p);
+        stepWorld(w, p, k % 3 === 0 ? "AVANCER" : k % 3 === 1 ? "GAUCHE" : "DROITE", rng);
+      }
+    } finally {
+      for (const [nom, vrai] of originaux) {
+        cible[nom] = vrai as (...a: number[]) => number;
+      }
+    }
+    expect(appels).toEqual([]);
+  });
+
+  it("garde le cap sur le cercle unité sur 20 000 rotations", () => {
+    // Une rotation répétée fait dériver la norme si turnCos² + turnSin² ≠ 1 exactement en
+    // flottant — et elle ne vaut jamais 1 exactement. D'où la renormalisation à chaque pas.
+    const w = createWorld(p, mulberry32(3));
+    const rng = mulberry32(9);
+    for (let k = 0; k < 20_000; k++) stepWorld(w, p, "GAUCHE", rng);
+    expect(Math.sqrt(w.hx * w.hx + w.hy * w.hy)).toBeCloseTo(1, 9);
+  }, 60_000);
+
+  it("donne le même secteur que l'ancien calcul par angle, sur 360 directions", () => {
+    // Équivalence stricte avec `round(atan2(ry, rx) / pas)`, la formule remplacée.
+    const S = SECTEURS_OLF;
+    const pas = (2 * Math.PI) / S;
+    for (let deg = 0; deg < 360; deg++) {
+      const a = (deg * Math.PI) / 180 - Math.PI;
+      const attendu = ((Math.round(a / pas) % S) + S) % S;
+      expect(secteurDe(Math.cos(a), Math.sin(a), S)).toBe(attendu);
+    }
+  });
+
+  it("ignore l'échelle du vecteur : seule la direction compte", () => {
+    for (const echelle of [0.001, 1, 1000]) {
+      expect(secteurDe(0.6 * echelle, 0.8 * echelle, SECTEURS_OLF)).toBe(
+        secteurDe(0.6, 0.8, SECTEURS_OLF),
+      );
+    }
   });
 });

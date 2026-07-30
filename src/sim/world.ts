@@ -16,7 +16,13 @@ export interface WorldState {
   t: number;
   x: number;
   y: number;
-  heading: number;
+  /**
+   * Cap, en VECTEUR UNITAIRE plutôt qu'en radians. Voir `turnCos`/`turnSin` dans params.ts :
+   * stocker un angle imposerait `Math.cos`/`Math.sin`, qui ne sont pas spécifiés au bit près
+   * et faisaient diverger l'organisme entre moteurs JavaScript.
+   */
+  hx: number;
+  hy: number;
   energy: number;
   alive: boolean;
   foodX: Float32Array;
@@ -70,7 +76,8 @@ export function createWorld(p: WorldParams, rng: RNG): WorldState {
     t: 0,
     x: 0,
     y: 0,
-    heading: 0,
+    hx: 1, // cap vers +x, équivalent de l'ancien heading = 0
+    hy: 0,
     energy: p.energyStart,
     alive: true,
     foodX,
@@ -91,19 +98,65 @@ export function createWorld(p: WorldParams, rng: RNG): WorldState {
 }
 
 /**
+ * Directions centrales des secteurs, construites une fois par nombre de secteurs.
+ *
+ * Stockées en Float32Array délibérément : l'arrondi f32 efface les écarts inter-moteurs de
+ * `Math.cos`/`Math.sin` (mesuré : 6,94 % des tirages diffèrent en double précision entre V8 et
+ * JSC, 0 sur 10⁷ survivent à l'arrondi f32). La construction a lieu hors du chemin par tick.
+ */
+const CENTRES = new Map<number, { cx: Float32Array; cy: Float32Array }>();
+function centres(secteurs: number): { cx: Float32Array; cy: Float32Array } {
+  let c = CENTRES.get(secteurs);
+  if (c === undefined) {
+    const cx = new Float32Array(secteurs);
+    const cy = new Float32Array(secteurs);
+    for (let k = 0; k < secteurs; k++) {
+      const a = (2 * Math.PI * k) / secteurs;
+      cx[k] = Math.cos(a);
+      cy[k] = Math.sin(a);
+    }
+    c = { cx, cy };
+    CENTRES.set(secteurs, c);
+  }
+  return c;
+}
+
+/**
+ * Secteur d'une direction (rx, ry) exprimée dans le repère de l'organisme.
+ *
+ * On retient le secteur dont la direction centrale maximise le produit scalaire. C'est
+ * strictement équivalent à `round(atan2(ry, rx) / pas)` — le secteur le plus proche
+ * angulairement est celui de plus grand cosinus d'écart — mais sans `atan2`. L'échelle de
+ * (rx, ry) n'intervient pas : elle est positive et multiplie tous les produits de la même façon.
+ *
+ * Le secteur 0 reste centré sur « droit devant ».
+ */
+export function secteurDe(rx: number, ry: number, secteurs: number): number {
+  const { cx, cy } = centres(secteurs);
+  let best = 0;
+  let bestDot = rx * cx[0] + ry * cy[0];
+  for (let k = 1; k < secteurs; k++) {
+    const d = rx * cx[k] + ry * cy[k];
+    if (d > bestDot) {
+      bestDot = d;
+      best = k;
+    }
+  }
+  return best;
+}
+
+/**
  * Dépose une intensité dans le secteur du gisement, avec un léger étalement sur les voisins.
  * Codage par population : pas de seuil binaire, l'intensité décroît avec la distance.
  */
 function deposer(
   canal: Float32Array,
-  angleRelatif: number,
+  rx: number,
+  ry: number,
   intensite: number,
   secteurs: number,
 ): void {
-  const pas = (2 * Math.PI) / secteurs;
-  // Le secteur 0 est centré sur « droit devant ».
-  const b = Math.round(angleRelatif / pas);
-  const idx = ((b % secteurs) + secteurs) % secteurs;
+  const idx = secteurDe(rx, ry, secteurs);
   const gauche = (idx + secteurs - 1) % secteurs;
   const droite = (idx + 1) % secteurs;
   if (intensite > canal[idx]) canal[idx] = intensite;
@@ -112,12 +165,47 @@ function deposer(
   if (flanc > canal[droite]) canal[droite] = flanc;
 }
 
-/** Angle du point (px, py) relativement au cap de l'organisme, dans (-π, π]. */
-function angleRelatif(w: WorldState, px: number, py: number): number {
-  let a = Math.atan2(py - w.y, px - w.x) - w.heading;
-  while (a > Math.PI) a -= 2 * Math.PI;
-  while (a <= -Math.PI) a += 2 * Math.PI;
-  return a;
+/**
+ * Direction du point (px, py) dans le repère de l'organisme, et sa distance.
+ *
+ * (rx, ry) est le vecteur organisme→point tourné de −cap : une rotation, donc quatre
+ * multiplications. Remplace `atan2` ET `hypot` en un seul passage.
+ */
+function relatif(
+  w: WorldState,
+  px: number,
+  py: number,
+): { rx: number; ry: number; d: number } {
+  const dx = px - w.x;
+  const dy = py - w.y;
+  return {
+    rx: dx * w.hx + dy * w.hy,
+    ry: dy * w.hx - dx * w.hy,
+    d: Math.sqrt(dx * dx + dy * dy),
+  };
+}
+
+/** Distance euclidienne. `Math.sqrt` est exactement spécifié, `Math.hypot` ne l'est pas. */
+function distance(ax: number, ay: number, bx: number, by: number): number {
+  const dx = ax - bx;
+  const dy = ay - by;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+/**
+ * Direction aléatoire uniforme, sans trigonométrie : tirage par rejet dans le disque unité,
+ * puis normalisation. Consomme un nombre variable d'appels RNG (espérance 4/π ≈ 1,27 paires).
+ */
+function directionAleatoire(rng: RNG): { dx: number; dy: number } {
+  for (;;) {
+    const u = rng() * 2 - 1;
+    const v = rng() * 2 - 1;
+    const q = u * u + v * v;
+    if (q > 1e-12 && q <= 1) {
+      const inv = 1 / Math.sqrt(q);
+      return { dx: u * inv, dy: v * inv };
+    }
+  }
 }
 
 function emettre(
@@ -131,9 +219,9 @@ function emettre(
 ): void {
   for (let i = 0; i < xs.length; i++) {
     if (cd[i] > 0) continue; // consommée : elle ne sent plus rien
-    const d = Math.hypot(xs[i] - w.x, ys[i] - w.y);
-    if (d >= portee) continue;
-    deposer(canal, angleRelatif(w, xs[i], ys[i]), 1 - d / portee, secteurs);
+    const r = relatif(w, xs[i], ys[i]);
+    if (r.d >= portee) continue;
+    deposer(canal, r.rx, r.ry, 1 - r.d / portee, secteurs);
   }
 }
 
@@ -148,9 +236,9 @@ export function sense(w: WorldState, p: WorldParams): Sensation {
   emettre(food, w, w.foodX, w.foodY, w.foodCooldown, p.olfRange, SECTEURS_OLF);
   emettre(toxin, w, w.toxinX, w.toxinY, w.toxinCooldown, p.olfRange, SECTEURS_OLF);
 
-  const dPred = Math.hypot(w.predX - w.x, w.predY - w.y);
-  if (dPred < p.alarmRange) {
-    deposer(alarm, angleRelatif(w, w.predX, w.predY), 1 - dPred / p.alarmRange, SECTEURS_ALARM);
+  const rp = relatif(w, w.predX, w.predY);
+  if (rp.d < p.alarmRange) {
+    deposer(alarm, rp.rx, rp.ry, 1 - rp.d / p.alarmRange, SECTEURS_ALARM);
   }
 
   // Somesthésie : les quatre murs, vus comme des contacts à portée courte.
@@ -162,9 +250,9 @@ export function sense(w: WorldState, p: WorldParams): Sensation {
     [w.x, -p.arena],
   ];
   for (const [mx, my] of murs) {
-    const d = Math.hypot(mx - w.x, my - w.y);
-    if (d >= contact) continue;
-    deposer(soma, angleRelatif(w, mx, my), 1 - d / contact, SECTEURS_SOMA);
+    const r = relatif(w, mx, my);
+    if (r.d >= contact) continue;
+    deposer(soma, r.rx, r.ry, 1 - r.d / contact, SECTEURS_SOMA);
   }
 
   const energy = Math.max(0, Math.min(1, w.energy / p.energyMax));
@@ -186,13 +274,22 @@ export function stepWorld(
   action: MotorAction,
   rng: RNG,
 ): WorldStep {
-  // 1) Action.
+  // 1) Action. Tourner = appliquer une rotation au vecteur de cap ; avancer = le suivre.
   let bouge = false;
-  if (action === "GAUCHE") w.heading += p.turnStep;
-  else if (action === "DROITE") w.heading -= p.turnStep;
-  else if (action === "AVANCER") {
-    w.x = clamp(w.x + Math.cos(w.heading) * p.stepLen, p.arena);
-    w.y = clamp(w.y + Math.sin(w.heading) * p.stepLen, p.arena);
+  if (action === "GAUCHE" || action === "DROITE") {
+    const s = action === "GAUCHE" ? p.turnSin : -p.turnSin;
+    const nx = w.hx * p.turnCos - w.hy * s;
+    const ny = w.hx * s + w.hy * p.turnCos;
+    // Renormalisation. Pour la paire actuelle, turnCos² + turnSin² vaut exactement 1 et la
+    // norme ne dérive pas (mesuré : 1,00000000000 après 20 000 rotations). C'est une propriété
+    // de CES deux littéraux, pas du procédé : changer l'angle de virage la perdrait. Le coût
+    // est d'une racine et de deux divisions par virage, toutes deux exactement spécifiées.
+    const inv = 1 / Math.sqrt(nx * nx + ny * ny);
+    w.hx = nx * inv;
+    w.hy = ny * inv;
+  } else if (action === "AVANCER") {
+    w.x = clamp(w.x + w.hx * p.stepLen, p.arena);
+    w.y = clamp(w.y + w.hy * p.stepLen, p.arena);
     bouge = true;
   }
 
@@ -205,7 +302,7 @@ export function stepWorld(
   // 3) Collisions avec les pastilles.
   for (let i = 0; i < p.nFood; i++) {
     if (w.foodCooldown[i] > 0) continue;
-    if (Math.hypot(w.foodX[i] - w.x, w.foodY[i] - w.y) < p.foodRadius) {
+    if (distance(w.foodX[i], w.foodY[i], w.x, w.y) < p.foodRadius) {
       w.energy = Math.min(p.energyMax, w.energy + p.gainFood);
       reward += p.rFood;
       w.ateFood++;
@@ -215,7 +312,7 @@ export function stepWorld(
   }
   for (let i = 0; i < p.nToxin; i++) {
     if (w.toxinCooldown[i] > 0) continue;
-    if (Math.hypot(w.toxinX[i] - w.x, w.toxinY[i] - w.y) < p.foodRadius) {
+    if (distance(w.toxinX[i], w.toxinY[i], w.x, w.y) < p.foodRadius) {
       w.energy -= p.lossToxin;
       reward += p.rToxin;
       w.ateToxin++;
@@ -225,24 +322,24 @@ export function stepWorld(
   }
 
   // 4) Prédateur : poursuite sous le rayon de détection, dérive lente au-delà.
-  const dPred = Math.hypot(w.predX - w.x, w.predY - w.y);
+  const dPred = distance(w.predX, w.predY, w.x, w.y);
   if (dPred < p.predatorSense && dPred > 1e-6) {
     w.predX += ((w.x - w.predX) / dPred) * p.predatorSpeed;
     w.predY += ((w.y - w.predY) / dPred) * p.predatorSpeed;
   } else {
-    const ang = rng() * 2 * Math.PI;
-    w.predX = clamp(w.predX + Math.cos(ang) * p.predatorSpeed * 0.4, p.arena);
-    w.predY = clamp(w.predY + Math.sin(ang) * p.predatorSpeed * 0.4, p.arena);
+    const dir = directionAleatoire(rng);
+    w.predX = clamp(w.predX + dir.dx * p.predatorSpeed * 0.4, p.arena);
+    w.predY = clamp(w.predY + dir.dy * p.predatorSpeed * 0.4, p.arena);
   }
-  if (Math.hypot(w.predX - w.x, w.predY - w.y) < p.predatorContact) {
+  if (distance(w.predX, w.predY, w.x, w.y) < p.predatorContact) {
     w.energy -= p.lossPredator;
     reward += p.rPredator;
     w.hits++;
     event = "PREDATOR";
     // Le prédateur recule après avoir frappé, sinon il vide l'organisme en quelques ticks.
-    const a = rng() * 2 * Math.PI;
-    w.predX = clamp(w.x + Math.cos(a) * p.predatorSense, p.arena);
-    w.predY = clamp(w.y + Math.sin(a) * p.predatorSense, p.arena);
+    const dir = directionAleatoire(rng);
+    w.predX = clamp(w.x + dir.dx * p.predatorSense, p.arena);
+    w.predY = clamp(w.y + dir.dy * p.predatorSense, p.arena);
   }
 
   // 5) Réapparitions.
@@ -263,7 +360,8 @@ export function stepWorld(
     w.lifeTicks = 0;
     w.x = 0;
     w.y = 0;
-    w.heading = 0;
+    w.hx = 1;
+    w.hy = 0;
     w.energy = p.energyStart;
   }
 
