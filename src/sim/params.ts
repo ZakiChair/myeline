@@ -1,8 +1,27 @@
 // Types et valeurs par défaut partagés par tout le noyau « Vie ».
 //
-// LE TICK EST L'UNITÉ DE TEMPS. Toutes les constantes temporelles (τm, τs, τthr, τe, délais
-// axonaux, métabolisme) s'expriment en ticks. On n'affirme AUCUNE correspondance en secondes :
-// un « taux de décharge » est en décharges par neurone et par tick.
+// LA SECONDE EST L'UNITÉ DE TEMPS, le tick n'en est que la résolution. Les constantes
+// temporelles (τm, τs, τthr, τe, délais axonaux) sont écrites en secondes dans `temps.ts` et
+// RÉSOLUES ici à l'horloge de référence dt = 1 ms. Les valeurs ci-dessous ne s'écrivent donc
+// plus à la main.
+//
+// POURQUOI CE RENVERSEMENT (lot 0, 2026-07-30) : tant que les constantes étaient écrites en
+// ticks, rien ne disait ce qu'un tick valait, et leur incohérence MUTUELLE restait invisible.
+// C'est ainsi que `tauElig / tauM` a pu valoir 3 pendant tout le lot 1, contre 50 à 1 000 en
+// biologie — une fenêtre de crédit environ 50 fois trop courte, jamais détectée faute d'unité
+// de référence. Voir l'entête de `temps.ts`.
+//
+// Un « taux de décharge » reste exprimé en décharges par neurone et par TICK : c'est une mesure
+// du modèle, pas une constante de la biologie.
+
+import {
+  DT_DEFAUT,
+  LIF_SECONDES,
+  PLASTICITE_SECONDES,
+  resoudreDelaiMax,
+  resoudreLif,
+  resoudrePlasticite,
+} from "./temps";
 
 // ─── Régions ────────────────────────────────────────────────────────────────────────────
 
@@ -91,7 +110,8 @@ export const TOPOLOGIE_DEFAUT: TopologyParams = {
   sigmaExc: 2.2,
   sigmaInh: 4.4,
   fracInh: 0.2,
-  delayMax: 8,
+  // Dérivé de DELAI_MAX_SECONDES (8 ms) : 8 ticks à l'horloge de référence.
+  delayMax: resoudreDelaiMax(DT_DEFAUT).delayMax,
   wExc: 0.09,
   wSensory: 0.4,
   wInh: 1.4,
@@ -118,17 +138,14 @@ export interface LifParams {
   noise: number;
 }
 
-export const LIF_DEFAUT: LifParams = {
-  tauM: 20,
-  tauS: 5,
-  tauThr: 120,
-  vRest: 0,
-  vReset: 0,
-  thrBase: 1,
-  thrJump: 0.18,
-  refrac: 3,
-  noise: 0.08,
-};
+/**
+ * Le neurone à l'horloge de référence (dt = 1 ms). DÉRIVÉ de `LIF_SECONDES` : modifier une
+ * constante de temps se fait là-bas, en secondes, jamais ici en ticks.
+ *
+ * Les valeurs obtenues sont identiques au noyau d'avant le lot 0 — tauM 20, tauS 5, tauThr 120,
+ * refrac 3 — et `temps.test.ts` les épingle en entiers littéraux.
+ */
+export const LIF_DEFAUT: LifParams = resoudreLif(LIF_SECONDES, DT_DEFAUT).params;
 
 // ─── Régime calibré ─────────────────────────────────────────────────────────────────────
 //
@@ -175,22 +192,19 @@ export interface PlasticityParams {
   wMax: number;
 }
 
-export const PLASTICITE_DEFAUT: PlasticityParams = {
-  tauPre: 20,
-  tauPost: 20,
-  tauElig: 60,
-  aPlus: 0.012,
-  // Légèrement inférieur à aPlus : le choix standard qui évite la dérive vers zéro d'un
-  // réseau à activité irrégulière.
-  aMinus: 0.0105,
-  lr: 0.05,
-  dumpEvery: 16,
-  dumpNow: 0.6,
-  homeoEvery: 500,
-  homeoRate: 0.15,
-  homeoClamp: 0.05,
-  wMax: 3.0,
-};
+/**
+ * La plasticité à l'horloge de référence (dt = 1 ms). DÉRIVÉE de `PLASTICITE_SECONDES`.
+ *
+ * DEUX valeurs changent par rapport au noyau d'avant le lot 0, et ce sont LE changement de fond :
+ *   - `tauElig` : 60 → 2 500 ticks (2,5 s). La fenêtre de crédit était ~50× trop courte ;
+ *   - `dumpEvery` : 16 → 250 ticks (250 ms), soit un dixième de la fenêtre — 16 ticks serait
+ *     absurdement fréquent face à 2 500, et le balayage dopaminergique coûtait 17 % du temps.
+ * Les autres sont inchangées : tauPre/tauPost 20, homeoEvery 500.
+ */
+export const PLASTICITE_DEFAUT: PlasticityParams = resoudrePlasticite(
+  PLASTICITE_SECONDES,
+  DT_DEFAUT,
+).params;
 
 /**
  * Cible de l'homéostasie, en décharges par neurone et par tick.

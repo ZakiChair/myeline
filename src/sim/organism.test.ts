@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { mulberry32 } from "../lib/rng";
 import { createOrganism, runOrganism, stepOrganism } from "./organism";
 import { derivePoids } from "./metrics";
-import { ORGANISME_DEFAUT } from "./params";
+import { ORGANISME_DEFAUT, PLASTICITE_DEFAUT } from "./params";
 
 const cfg = (over = {}) => ({
   ...ORGANISME_DEFAUT,
@@ -208,5 +208,37 @@ describe("témoins de plasticité", () => {
     const dPlast = derivePoids(plastique.brain.topo, avantPlast);
 
     expect(dGele.moyenne).toBeGreaterThan(dPlast.moyenne * 0.5);
+  }, 300_000);
+
+  it("la fenêtre de crédit du lot 0 multiplie par 2 au moins le mouvement dû à la RÈGLE", () => {
+    // LE critère de succès de la tâche 4, et il ne peut PAS se lire sur une dérive totale :
+    // l'homéostasie balaie toutes les arêtes 40 fois en 20 000 ticks, la règle ne s'applique
+    // qu'aux ~30 récompenses rencontrées. Chercher 3 % de signal dans une quantité dominée à
+    // 97 % par autre chose, entre deux runs de trajectoires différentes, ne mesure rien.
+    //
+    // Le témoin gelé-total ayant une dérive EXACTEMENT nulle, couper l'homéostasie rend toute
+    // dérive restante imputable à la règle à trois facteurs, sans soustraction ni témoin.
+    //
+    // MESURÉ le 2026-07-30 sur 3 graines (7, 11, 23), 20 000 ticks, n = 2500 :
+    //   fenêtre 60   : dérive 0,001409 — soit 3,4 % du mouvement homéostatique
+    //   fenêtre 2500 : dérive 0,004934 — soit 12,0 %
+    //   rapport ×3,50, écart entre graines inférieur à 5 %
+    // Le seuil est posé à ×2, bien sous la mesure : ce test épingle le GAIN, il ne réassertionne
+    // pas un chiffre que la recalibration de la tâche 6 fera bouger.
+    const regleSeule = (tauElig: number, dumpEvery: number) => {
+      const p = cfg();
+      const org = createOrganism(
+        { ...p, brain: { ...p.brain, plasticity: { ...p.brain.plasticity, tauElig, dumpEvery } } },
+        { homeostasis: false },
+      );
+      const avant = copiePoids(org);
+      runOrganism(org, 20_000, mulberry32(7));
+      return derivePoids(org.brain.topo, avant).moyenne;
+    };
+
+    const ancienne = regleSeule(60, 16);
+    const nouvelle = regleSeule(PLASTICITE_DEFAUT.tauElig, PLASTICITE_DEFAUT.dumpEvery);
+    expect(ancienne).toBeGreaterThan(0);
+    expect(nouvelle).toBeGreaterThan(ancienne * 2);
   }, 300_000);
 });
