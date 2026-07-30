@@ -3,7 +3,18 @@
 Date : 2026-07-30 · Branche : `vie` · Remplace l'anatomie de
 `2026-07-30-myeline-vie-design.md`, conserve sa méthode
 
-**Statut : conception soumise à revue. Rien n'est implémenté.**
+**Statut : conception revue par Zaki le 2026-07-30, cinq arbitrages tranchés (§11). Rien n'est
+implémenté.**
+
+## 0. Décisions de Zaki, et leurs conséquences
+
+| Question | Décision | Conséquence principale |
+|---|---|---|
+| Le mot « abeille » | **échelle complète d'abord** | Le lot 3 devient **obligatoire**, pas optionnel. Recalculé (§8) : c'est **atteignable** — 457 Mo et ≈ 300 ticks/s, cinq fois moins cher que mon extrapolation initiale. |
+| L'horloge | **1 ms pour les tests finaux, 10 ms pour le débogage** | `dt` devient un **paramètre**, donc **toutes les constantes doivent être exprimées en secondes** et converties à la construction. ⚠️ À 10 ms, le réfractaire et les délais axonaux tombent sous le tick : voir §4.1, ce mode ne peut pas servir à déboguer l'apprentissage. |
+| L'arène | **à mon appréciation** → elle devient **un harnais parmi d'autres** | Rien n'est perdu : `arena.ts` ré-enveloppe le monde actuel dans l'interface `Task`. Le lot 1 et `/theorie` restent intacts. |
+| Casser la dynamique pour la portabilité | **oui** | Les correctifs de `world.ts`, les littéraux de décroissance et le stockage en `Float32Array` entrent au **lot 0**, en même temps que le changement d'horloge — pour ne payer la recalibration **qu'une fois**. |
+| La neurogenèse | **oui, dans le périmètre** | Les deux règles établies deviennent le générateur de topologie : rayon du calice = **horloge de naissance inversée**, et **compartiments par modalité** (lèvre olfactive / collier visuel / anneau basal). |
 
 Convention héritée du journal de calibration : chaque chiffre porte son statut — **mesuré** (dans
 cette session ou le journal du lot 1), **publié** (avec sa source), **calculé** (arithmétique
@@ -270,15 +281,46 @@ partiellement vraie, elle était vraie d'un facteur ≈ 50, et le journal ne pou
 d'unité de référence. Deux calculs indépendants y aboutissent — le mien, par le rapport des
 constantes ; celui de l'analyse du banc, par la fraction d'éligibilité survivante à l'ISI publié.
 
-### Décision : `dt = 1 ms`, et pourquoi je m'écarte de l'alternative à 10 ms
+### 4.1 Décision de Zaki : deux horloges — et ce qui casse à 10 ms
 
-L'analyse du banc de tâches recommande `1 tick = 10 ms`, ce qui divise le coût des protocoles par
-dix — mais au prix de lire `tauM = 20 ticks` comme 200 ms, soit dix fois trop lent pour une membrane,
-et les délais axonaux comme 10 à 80 ms au lieu de 1 à 5 ms. **Ce compromis contredit l'objet même de
-la refonte** : on ne peut pas invoquer la correspondance au réel et rendre le neurone
-non physiologique pour gagner du temps machine.
+**`dt` devient un paramètre : 1 ms pour les tests finaux, 10 ms pour le débogage.** La conséquence
+structurelle est immédiate et non négociable : **toutes les constantes temporelles doivent être
+exprimées en secondes** dans les paramètres, et converties en ticks à la construction
+(`tauM_ticks = tauM_secondes / dt`). Aujourd'hui elles sont écrites en ticks (`tauM: 20`) : changer
+`dt` changerait silencieusement le modèle au lieu de changer sa résolution.
 
-`dt = 1 ms` retenu, avec son coût affiché (**calculé**, aux débits mesurés) :
+**Ce qui survit et ce qui casse à 10 ms** (conversion depuis les valeurs en secondes) :
+
+| constante | valeur physiologique | à `dt` = 1 ms | à `dt` = 10 ms |
+|---|---|---|---|
+| `tauM` (membrane) | 20 ms | 20 ticks ✔ | 2 ticks — grossier mais représentable |
+| `tauElig` (crédit) | 2,5 s | 2 500 ticks ✔ | 250 ticks ✔ |
+| `tauS` (courant synaptique) | 5 ms | 5 ticks ✔ | 0,5 tick → **arrondi à 1** |
+| **réfractaire** | 2–3 ms | 3 ticks ✔ | **0,2–0,3 tick → 0** ⚠️ |
+| **délais axonaux** | 1–8 ms | 1–8 ticks ✔ | **0,1–0,8 tick → 0** ⚠️ |
+
+Les deux dernières lignes sont le problème, et il est précis. `lif.ts:11-12` documente comme **non
+négociable** que « le délai minimal valant 1, une décharge du tick t ne peut JAMAIS être consommée au
+tick t : c'est ce qui rend *avant* et *après* distinguables, prérequis de la STDP ». À 10 ms, les
+délais tombent à zéro et **cette distinction disparaît** — c'est-à-dire précisément le mécanisme qui
+porte l'apprentissage.
+
+**Traitement retenu, qui respecte la décision sans laisser le piège ouvert :**
+
+1. **Plancher à 1 tick.** Toute constante qui arrondit à 0 est portée à 1, et la construction **émet
+   un avertissement nommant chaque constante concernée**. À 10 ms l'avertissement listerait le
+   réfractaire et les délais.
+2. **Tout résultat produit à `dt` ≠ 1 ms est marqué « non probant »** dans les métriques et dans
+   l'interface. Un chiffre issu d'un run de débogage ne peut jamais être cité.
+3. **Ce que le mode 10 ms peut réellement servir :** vérifier que le harnais tourne, que les
+   événements se déclenchent, que l'interface se met à jour. **Pas** déboguer l'apprentissage — les
+   quantités qui le portent sont exactement celles qui se dégradent.
+4. **Pour itérer vite SUR l'apprentissage, le bon levier est `n` et le nombre de sujets, pas `dt`** —
+   parce qu'il ne coûte **aucune** fidélité. À `dt` = 1 ms, passer de 40 à 8 sujets et de n = 50 000
+   à n = 2 500 ramène le protocole de plusieurs heures à **≈ 5 minutes**, avec exactement la même
+   physique. C'est le mode de débogage que je recommande d'utiliser en pratique.
+
+Coût du protocole aux deux horloges (**calculé**, aux débits mesurés) :
 
 | | à 10 ms/tick | **à 1 ms/tick** |
 |---|---|---|
@@ -752,10 +794,74 @@ indifférents à la tâche, et mesurés.
 
 ---
 
-## 8. L'échelle : la limite est la mémoire, pas la vitesse
+## 8. L'échelle : atteignable, parce que l'anatomie réelle est CREUSE
 
-Deux calculs indépendants convergent (**calculé**, à partir du rapport de 59,75 arêtes par neurone
-**mesuré** au lot 1) :
+Zaki exige l'échelle complète avant que le mot « abeille » soit employé. J'ai donc refait le calcul
+avec les effectifs publiés au lieu d'extrapoler la dalle homogène — et **le résultat est cinq fois
+meilleur que mon estimation initiale.**
+
+### 8.1 Pourquoi l'extrapolation homogène était trop pessimiste
+
+Elle supposait 59,75 arêtes par neurone, c'est-à-dire la dalle corticale mise à l'échelle. **La voie
+olfactive réelle en a 24,9**, et surtout : **seules les arêtes cellule de Kenyon → sortie portent des
+traces d'éligibilité** (7,4 M sur 12,4 M), là où la dalle en donnait à toutes.
+
+| population | neurones | arêtes sortantes |
+|---|---|---|
+| récepteurs olfactifs | 120 000 | 0,12 M |
+| interneurones locaux du lobe antennaire | 8 000 | 1,28 M |
+| neurones de projection + glomérules | 2 120 | (comptées côté KC) |
+| **cellules de Kenyon** | **368 000** | **11,04 M** (10 afférences + 20 sorties chacune) |
+| neurones de sortie (MBON) | 400 | — |
+| neurones A3 (rétroaction) | 110 | — (population, pas arête à arête) |
+| **total voie olfactive** | **498 630** | **12,44 M** |
+
+| poste | voie olfactive | + lobes optiques (432 000 n.) |
+|---|---|---|
+| structure des arêtes (17 o) | 202 Mo | ≈ 349 Mo |
+| traces plastiques (8 o, KC → sortie seulement) | 56 Mo | 56 Mo |
+| état des neurones + tampon des délais | 27 Mo | ≈ 52 Mo |
+| **TOTAL** | **285 Mo** | **≈ 457 Mo** |
+
+**Contre 1 442 Mo pour l'extrapolation homogène : ×5,1 moins cher.** 457 Mo tient dans un onglet de
+navigateur. **L'exigence d'échelle complète est donc satisfaisable, et je m'étais trompé en la
+présentant comme un changement de substrat.**
+
+### 8.2 Et c'est le bruit, pas les arêtes, qui décide du débit
+
+Décomposition du coût par tick à l'échelle complète (**calculé** à partir des mesures de §5.4) :
+
+| source de bruit | boucles O(n) | **bruit** | propagation | dopamine | total | débit |
+|---|---|---|---|---|---|---|
+| Box–Muller (actuel) | 1,08 ms | **11,19 ms** | 0,18 ms | 0,02 ms | 12,47 ms | **80 ticks/s** |
+| **Ziggurat / table** | 1,08 ms | **0,55 ms** | 0,18 ms | 0,02 ms | **1,83 ms** | **548 ticks/s** |
+
+**Le bruit représente 88 % du budget** à cette échelle — davantage encore qu'à n = 50 000, parce que
+le réseau est riche en neurones et pauvre en arêtes. **Le remplacement du Box–Muller cesse d'être une
+optimisation agréable : c'est la seule modification qui rende l'exigence d'échelle complète
+atteignable** (×7 sur le débit). Il passe donc au lot 0 comme changement structurant, pas comme
+confort.
+
+### 8.3 Le protocole complet à l'échelle complète
+
+12,32 M ticks (7 essais × 22 000 × 40 sujets × 2 groupes). **Les 80 sujets sont indépendants**, donc
+le parallélisme est trivial :
+
+| débit | séquentiel | sur 14 cœurs |
+|---|---|---|
+| 100 ticks/s | 34,2 h | 2,4 h |
+| 300 ticks/s (voie olfactive + lobes optiques, Ziggurat) | 11,4 h | **0,8 h** |
+| 548 ticks/s (voie olfactive seule) | 6,2 h | **0,4 h** |
+
+Mémoire simultanée sur 14 cœurs : ≈ 6,3 Go pour 457 Mo par sujet, dans les 38,7 Go de la machine.
+**Le protocole complet, à l'échelle anatomique complète, tient en moins d'une heure au mur.**
+
+⚠️ **Statut de ces chiffres : calculés, pas mesurés.** Les coefficients de coût par neurone et par
+arête (0,72 ns) sont dérivés des mesures à n = 50 000 ; le modèle de propagation suppose une
+implémentation **événementielle** (coût ∝ décharges × fan-out, pas ∝ arêtes). À vérifier au lot 3 sur
+le vrai code — c'est précisément la porte de ce lot.
+
+### 8.4 Pour mémoire : l'extrapolation homogène, qui reste valable pour la dalle actuelle
 
 | n | arêtes | mémoire | ticks/s | statut du débit |
 |---|---|---|---|---|
@@ -770,21 +876,15 @@ Le débit est en **1/n exact** sur les trois points mesurés (340 → 167 → 84
 ce qui rend l'extrapolation solide. Et deux calculs de mémoire indépendants convergent sur 1,44 à
 1,64 Go.
 
-À 500 000 neurones on dépasse déjà de **2,5 fois** la borne d'arrêt de 300 Mo que le plan du lot 1
-s'était fixée. À 960 000 on demande **1,4 Go de tableaux typés** dans un moteur JavaScript
-mono-thread : impraticable dans un onglet, fragile même en Node. Et le débit extrapolé est
-**optimiste** — il ignore la dégradation de cache, qui s'aggrave dès que le graphe cesse de tenir en
-L3.
+Ces chiffres restent la référence **pour la dalle homogène actuelle**, et ils disent qu'elle ne monte
+pas : mettre le modèle du lot 1 à l'échelle de l'abeille demanderait 1,4 Go et donnerait 15 ticks/s.
 
-Conséquence pour la boucle de mesure : un protocole de 400 000 ticks passerait de **53 s par graine**
-(n = 2 500, **mesuré**) à **≈ 7,4 h par graine** à n = 10⁶. **La cible du million détruit la boucle
-de mesure**, qui est le principal actif méthodologique du projet.
-
-**Conclusion à porter sans détour : l'échelle de l'abeille n'est pas un réglage de `n`, c'est un
-changement de substrat** (WebGPU, wasm + SIMD, ou quantification des poids). Et c'est un chantier
-**séparé** : toutes les fiches des rangs 1 à 5 tournent en dizaines de minutes à n = 2 500. On obtient
-donc des résultats falsifiables sur les fonctions **maintenant**, à petite échelle. C'est le
-découplage le plus utile de ce document.
+**Mais ce n'est plus la question**, et c'est la leçon de ce §8 : *la dalle ne monte pas, l'anatomie
+si*. La différence n'est pas une optimisation, c'est le fait qu'un cerveau réel n'est pas un graphe
+aléatoire homogène — il a un goulot d'étranglement (368 000 cellules de Kenyon vers 400 neurones de
+sortie), un code épars, et une plasticité confinée. **Les trois propriétés qui rendent l'apprentissage
+audible (§3) sont exactement celles qui rendent l'échelle abordable.** C'est la meilleure justification
+de la refonte, et elle n'était pas visible avant d'avoir compté.
 
 ### Le déterminisme : trois prémisses du projet sont fausses (**mesuré**)
 
@@ -888,11 +988,21 @@ localité dégradée.
 
 Chaque lot a une porte **falsifiable**. Aucun lot ne commence avant que le précédent passe.
 
-**Lot 0 — L'horloge et les préalables.** Fixer `dt = 1 ms`, re-dériver toutes les constantes depuis
-des valeurs publiées, conditionner l'homéostasie par `lr`, remplacer Box–Muller par Ziggurat.
-*Porte* : le régime reste dans les bornes de `calibration.probe.test.ts`, **et** le débit à
-n = 50 000 dépasse 800 ticks/s (contre 534 **mesurés** sur la boucle LIF), **et** le témoin `lr = 0`
-déplace zéro poids. Le lot le moins spectaculaire et le plus décisif.
+**Lot 0 — L'horloge, la portabilité et les préalables.** Un seul lot, parce que chacun de ces
+changements invalide la calibration : les grouper fait payer la recalibration **une seule fois**.
+1. **`dt` devient un paramètre** et toutes les constantes passent en secondes, avec plancher à 1 tick
+   et avertissement nommant les constantes rabotées (§4.1).
+2. **Ziggurat remplace Box–Muller** — structurant, pas cosmétique : ×7 sur le débit à l'échelle
+   complète (§8.2).
+3. **Portabilité** (décision de Zaki n° 4) : les 14 appels de `world.ts`, `x`/`y`/`heading` en
+   `Float32Array`, les 3 constantes de décroissance en littéraux, libm en arithmétique pure.
+4. **L'homéostasie est conditionnée par `lr`** — sans quoi aucun témoin n'est interprétable.
+
+*Portes* : (a) le régime reste dans les bornes de `calibration.probe.test.ts` après recalibration ;
+(b) le débit à n = 50 000 dépasse 1 200 ticks/s sur la boucle LIF (contre 534 **mesurés**) ;
+(c) le témoin `lr = 0` déplace **zéro** poids ; (d) **l'organisme complet donne un état identique au
+bit près sous Node et sous Bun sur 20 000 ticks** — la propriété que le projet croyait avoir. Le lot
+le moins spectaculaire et le plus décisif.
 
 **Lot 1 — La voie olfactive.** Glomérules → cellules de Kenyon → neurone de sortie, avec APL, sans
 récurrence corticale, **sans homéostasie sur les poids**. Plasticité confinée à la couche de sortie.
@@ -904,15 +1014,24 @@ un substrat impulsionnel complet.
 gradient 53/31/23. Puis séparer octopamine et dopamine en populations nommées.
 *Porte* : la porte à trois volets du §6.3 rang 3, dont la **double dissociation par lésion**.
 
-**Lot 3 — L'échelle réelle.** Monter les cellules de Kenyon à leur comptage publié, ajouter lobes
-optiques et complexe central en populations **nommées mais non plastiques**.
-*Porte* : les protocoles des lots 1 et 2 passent encore, avec les mêmes portes, à l'échelle complète.
-Si un protocole ne passe plus, l'échelle a cassé quelque chose et on l'apprend là.
+**Lot 3 — L'échelle réelle. OBLIGATOIRE** (décision de Zaki n° 1 : le mot « abeille » ne s'emploie
+qu'à l'échelle complète). Monter les cellules de Kenyon à 368 000, ajouter lobes optiques et complexe
+central en populations **nommées mais non plastiques**.
+*Portes* : (a) les protocoles des lots 1 et 2 passent encore, avec les mêmes portes, à l'échelle
+complète — si un protocole ne passe plus, l'échelle a cassé quelque chose et on l'apprend là ;
+(b) **la mémoire mesurée reste sous 600 Mo et le débit au-dessus de 250 ticks/s**, ce qui valide ou
+réfute les chiffres *calculés* du §8.
 
-**Lot 4 — Le rendu**, sous la contrainte de déterminisme du §8.
+**Lot 4 — Le rendu**, sous la contrainte de déterminisme du §8 (GPU cantonné à l'affichage).
 
-**C'est au lot 3 que l'on cesse de mentir en disant « abeille ».** Avant, le mot désigne une voie
-olfactive, pas un animal. À écrire ainsi dans l'interface.
+### La règle de nommage, décidée par Zaki
+
+**Le mot « abeille » n'apparaît nulle part — ni dans l'interface, ni dans les titres, ni dans les
+résultats — avant que le lot 3 soit passé.** Jusque-là le produit dit « voie olfactive », « corps
+pédonculé », « cellules de Kenyon » : des noms de structures, exacts, qui ne promettent pas un animal.
+C'est plus strict que ce que je recommandais, et c'est la bonne discipline : elle interdit
+précisément le glissement qui a mis « CORTEX » et « VTA » dans un modèle qui n'en avait ni l'un ni
+l'autre.
 
 ---
 
@@ -948,24 +1067,38 @@ plutôt que laissés :
 
 ---
 
-## 11. Questions que seul Zaki peut trancher
+## 11. Les cinq arbitrages, tranchés le 2026-07-30
 
-1. **Le mot « abeille » avant le lot 3.** Assume-t-on de dire « voie olfactive d'abeille » jusqu'au
-   lot 3, ou faut-il l'échelle complète avant d'employer le mot ?
-2. **`dt = 1 ms` ou 10 ms.** À 1 ms le neurone est physiologique et un protocole coûte ≈ 27 min à
-   n = 2 500 ; à 10 ms il coûte 2,2 min mais la membrane devient dix fois trop lente. Je recommande
-   1 ms — la refonte perd son sens si le neurone cesse d'être réaliste pour gagner du temps machine.
-3. **L'arène actuelle.** Devient-elle un harnais parmi d'autres (ma recommandation : rien n'est
-   perdu), ou disparaît-elle ? Elle ne mesure aucun protocole réel, mais c'est elle qui produit
-   l'image d'un organisme qui vit.
-4. ~~Deux moteurs ou un ?~~ — **tranché par la mesure, plus une question d'arbitrage** : un seul
-   calculateur, GPU cantonné au rendu (§8). Ce qui reste à trancher est en revanche réel :
-   **accepte-t-on de casser la dynamique actuelle pour gagner la reproductibilité inter-machines ?**
-   Les corrections de `world.ts` produisent un organisme différent et invalident toutes les constantes
-   calibrées du journal, qui devront repasser la porte. Je recommande de le faire — mais au lot 0, en
-   même temps que le changement d'horloge, pour ne payer la recalibration qu'une fois.
-5. **La neurogenèse** (lecture 2 du §1) : périmètre ou ouverture ? Deux de ses quatre règles sont
-   désormais assez établies pour être implémentées.
+1. **Le mot « abeille »** → **échelle complète d'abord.** Le lot 3 devient obligatoire ; jusque-là le
+   produit dit « voie olfactive » et « corps pédonculé ». Règle inscrite au §9. *Conséquence
+   heureuse : le recalcul du §8 montre que l'échelle complète coûte 457 Mo et ≈ 300 ticks/s, pas
+   1,44 Go et 15 ticks/s — je m'étais trompé, l'anatomie réelle est creuse.*
+2. **L'horloge** → **1 ms pour les tests finaux, 10 ms pour le débogage.** `dt` devient un paramètre,
+   toutes les constantes passent en secondes. ⚠️ Réserve technique documentée au §4.1 : à 10 ms le
+   réfractaire et les délais axonaux tombent sous le tick, donc ce mode sert à vérifier la plomberie,
+   **pas** à déboguer l'apprentissage. Pour itérer vite sur l'apprentissage, réduire `n` et le nombre
+   de sujets — même physique, ≈ 5 minutes par protocole.
+3. **L'arène** → **un harnais parmi d'autres**, ré-enveloppé dans l'interface `Task`. Rien n'est
+   perdu, `/theorie` et le lot 1 restent intacts.
+4. **Casser la dynamique pour la portabilité** → **oui**, au lot 0, groupé avec le changement
+   d'horloge pour ne payer la recalibration qu'une fois. Porte ajoutée : état identique au bit près
+   sous Node et sous Bun.
+5. **La neurogenèse** → **dans le périmètre.** Les deux règles établies deviennent le générateur de
+   topologie du lot 1 : rayon du calice = horloge de naissance inversée (≈ 2 000 neuroblastes,
+   cellules les plus vieilles à l'extérieur) et compartimentation par modalité (lèvre olfactive,
+   collier visuel, anneau basal). *Bénéfice inattendu : l'absence de neurogenèse adulte chez* Apis
+   *valide rétrospectivement le choix d'une topologie figée pendant la vie, qui n'était jusqu'ici
+   qu'une commodité.* La plasticité structurale (densité des microglomérules modulée par
+   l'expérience) reste hors périmètre — c'est un autre sujet.
+
+### Ce qui reste ouvert, et que la mesure devra trancher
+
+- Le **sens** de la plasticité cellule de Kenyon → sortie (potentialisation ou dépression), à établir
+  sur la littérature abeille avant l'implémentation.
+- Le nombre de neurones de sortie contactés par cellule de Kenyon — j'ai posé **20**, c'est
+  **inventé**, et cela pèse directement sur les 7,4 M d'arêtes plastiques du §8.
+- Les coefficients de coût du §8 sont **calculés**, pas mesurés à cette échelle : c'est la porte (b)
+  du lot 3.
 
 ---
 
