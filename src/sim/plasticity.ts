@@ -118,6 +118,8 @@ export function accumulateEligibility(
     ps.preTrace[i] += 1;
     ps.postTrace[i] += 1;
   }
+  // Même écart assumé, et même raison, qu'à lif.ts : invariants de boucle, donc une divergence
+  // inter-moteurs se verrait dès le premier tick. Voir le commentaire de `decayS` dans stepLif.
   const dPre = Math.exp(-1 / p.tauPre);
   const dPost = Math.exp(-1 / p.tauPost);
   for (let i = 0; i < topo.n; i++) {

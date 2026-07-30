@@ -67,6 +67,13 @@ export function stepLif(topo: Topology, st: LifState, p: LifParams, rng: RNG): n
   const n = st.n;
   const d = st.ringDepth;
   const base = (st.t % d) * n;
+  // ÉCART ASSUMÉ à la règle « aucune transcendante dans un chemin par tick » (lot 0). Cet appel
+  // est INVARIANT DE BOUCLE : il ne dépend que de p.tauS, fixe pendant tout un run, donc il rend
+  // le même double à chaque tick. Si V8 et JSC divergeaient d'un bit sur cette entrée, l'écart
+  // apparaîtrait dès le tick 1 et se composerait — ce n'est pas un risque probabiliste qui
+  // guette. La porte à 150 000 ticks (tools/porte-portabilite.mjs, empreinte
+  // 89bf8248:179/150/180/252 identique sous les deux moteurs) est la mesure qui l'établit.
+  // Le hisser vers createLif changerait la ligne qui calcule la valeur, pas la valeur.
   const decayS = Math.exp(-1 / p.tauS);
   const invTauM = 1 / p.tauM;
   const invTauThr = 1 / p.tauThr;
