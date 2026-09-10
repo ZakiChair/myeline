@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { BookOpen, Boxes, Brain, Bug, Sparkle } from "lucide-react";
+import { Activity, BookOpen, Boxes, Brain, Bug, Sparkle } from "lucide-react";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 
-export type AppMode = "studio" | "scale" | "creature" | "organisme";
+export type AppMode = "vie" | "studio" | "scale" | "creature" | "organisme";
 
 interface Props {
   themeId: string;
@@ -48,6 +48,17 @@ export function Header({ themeId, onThemeChange, mode, onModeChange }: Props) {
         </div>
 
         <div className="flex items-center gap-0.5 rounded-lg border border-white/10 bg-black/30 p-0.5">
+          <button
+            type="button"
+            onClick={() => onModeChange("vie")}
+            aria-pressed={mode === "vie"}
+            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] transition ${
+              mode === "vie" ? "bg-white/10 text-white" : "text-white/45 hover:text-white/80"
+            }`}
+          >
+            <Activity size={12} />
+            Vie
+          </button>
           <button
             type="button"
             onClick={() => onModeChange("studio")}

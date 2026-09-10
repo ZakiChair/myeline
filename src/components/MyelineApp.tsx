@@ -31,6 +31,11 @@ const NeuralGraph3D = dynamic(() => import("@/components/NeuralGraph3D"), {
   ssr: false,
   loading: graphLoader,
 });
+// Le mode « Vie » tourne dans un worker + WebGL : client uniquement.
+const VieMode = dynamic(() => import("@/components/vie/VieMode"), {
+  ssr: false,
+  loading: graphLoader,
+});
 
 type ViewMode = "2d" | "3d";
 
@@ -41,7 +46,7 @@ export function MyelineApp() {
   const [manualFit, setManualFit] = useState(0);
   const [brushMode, setBrushMode] = useState(false);
   const [view, setView] = useState<ViewMode>("2d");
-  const [mode, setMode] = useState<AppMode>("studio");
+  const [mode, setMode] = useState<AppMode>("vie");
 
   const fit = useCallback(() => setManualFit((n) => n + 1), []);
 
@@ -86,7 +91,9 @@ export function MyelineApp() {
         mode={mode}
         onModeChange={setMode}
       />
-      {mode === "scale" ? (
+      {mode === "vie" ? (
+        <VieMode />
+      ) : mode === "scale" ? (
         <ScaleMode theme={theme} />
       ) : mode === "creature" ? (
         <CreatureMode theme={theme} />

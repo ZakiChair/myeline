@@ -25,7 +25,8 @@ node tools/porte-portabilite.mjs   # porte V8/JSC : état identique au bit près
 |---|---|
 | `src/sim/` | **Noyau actif** — LIF à seuil adaptatif, topologie CSR bidirectionnelle, règle à trois facteurs (STDP × éligibilité × dopamine), monde (nourriture / toxine / prédateur), boucle fermée de l'organisme. Pur, déterministe, sans DOM. |
 | `src/lib/` | **Archive** — les moteurs historiques (automate excitable, réservoir, créature) qui alimentent encore l'interface et documentent le « mur du crédit ». |
-| `src/components/` + `src/app/` | Interface Next.js : modes studio / échelle / créature / organisme, et le parcours `/theorie`. |
+| `src/worker/` + `src/components/vie/` + `src/hooks/useOrganismSim.ts` | **Rendu du noyau (lot 2)** — worker temps réel, activité transférée en ping-pong de buffers, cerveau 3D (un point par neurone), monde 2D, course au seuil. |
+| `src/components/` + `src/app/` | Interface Next.js : modes vie / studio / échelle / créature / organisme, et le parcours `/theorie`. |
 | `docs/superpowers/` | Spécifications, plans de lots, **journal de calibration** — source de vérité des constantes mesurées. |
 | `tools/` | Portes outillées (ex. portabilité inter-moteurs). |
 
@@ -36,11 +37,15 @@ Branche de travail : refonte « voie olfactive » (spec `2026-07-30-myeline-abei
 - **Fait** : noyau `src/sim/` complet (organisme en boucle fermée à 50 000 neurones,
   1 523 ticks/s), lot 0 passé — constantes en secondes, `dt` paramètre, portabilité
   bit-exacte V8/JSC, témoins gelé-apprentissage / gelé-total.
+- **Fait aussi** : lot 2 « rendu » — le mode **Vie** de `/` montre l'organisme du
+  nouveau noyau tourner dans un worker (50 000 neurones, cadence mesurée affichée,
+  décisions visibles en direct). L'apprentissage n'y est toujours pas démontré —
+  affiché comme tel.
 - **Résultat négatif assumé** : le lot 1 « vie » n'a pas démontré d'apprentissage
   (l'homéostasie produisait 93–96 % du mouvement synaptique). Diagnostic et refonte dans
   les specs.
 - **À venir** : lot 1 « voie olfactive » (porte : courbe d'acquisition de Bitterman),
-  puis échelle complète, puis rendu du nouveau noyau.
+  puis échelle complète.
 
 ⚠️ Le mot « abeille » n'apparaît ni dans le code ni dans l'interface avant que le lot 3
 soit passé (règle de nommage décidée le 2026-07-30).
