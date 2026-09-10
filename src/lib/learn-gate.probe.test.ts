@@ -60,11 +60,8 @@ describe("[SONDE] NO-GO plan naïf 3-facteurs", () => {
   it("ΔW(A→B vs A→C) et éligibilité restent nuls (cue-seul ET co-stim)", () => {
     const cueOnly = runVariant(() => A);
     const coStim = runVariant(() => [...A, ...B]);
-    // eslint-disable-next-line no-console
     console.log(`\n[NO-GO] cue-seul : ΔW(A-B vs A-C)=${cueOnly.dW.toFixed(4)}  élig max(A-B)=${cueOnly.elig.toFixed(3)}`);
-    // eslint-disable-next-line no-console
     console.log(`[NO-GO] co-stim  : ΔW(A-B vs A-C)=${coStim.dW.toFixed(4)}  élig max(A-B)=${coStim.elig.toFixed(3)}`);
-    // eslint-disable-next-line no-console
     console.log(`[NO-GO] → apprentissage de contingence : ${Math.abs(cueOnly.dW) < 1e-6 && Math.abs(coStim.dW) < 1e-6 ? "AUCUN (confirmé)" : "signal détecté"}\n`);
   });
 });

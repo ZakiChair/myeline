@@ -35,9 +35,7 @@ describe("[SONDE] Hebb synchrone vs voie causale", () => {
       trace.push(`t${t} etats=[${[0, 1, 2].map((i) => g.nodes.get(i)?.state ?? "-").join(",")}]`);
       w01.push(g.weights.get(edgeKey(0, 1)) ?? 0);
     }
-    // eslint-disable-next-line no-console
     console.log("[SONDE causale] " + trace.join("  |  "));
-    // eslint-disable-next-line no-console
     console.log("[SONDE causale] poids A|B au fil du temps : " + w01.map((w) => w.toFixed(2)).join(" -> "));
   });
 });

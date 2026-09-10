@@ -396,7 +396,7 @@ export function stepScale(
   const aliveAfterDeaths = g.count - dead.length;
   const roomCap = params.populationCap - aliveAfterDeaths;
   const roomSlots = g.capacity - aliveAfterDeaths;
-  let room = Math.max(0, Math.min(roomCap, roomSlots));
+  const room = Math.max(0, Math.min(roomCap, roomSlots));
   let birthing: number[];
   if (room <= 0) birthing = [];
   else if (parents.length > room) {

@@ -92,11 +92,8 @@ describe("[GATE inc.4] replay de séquence sur le moteur Échelle réel (STDP + 
     train(hebb, "hebb", 8);
     const sHebb = replayScore(hebb);
 
-    // eslint-disable-next-line no-console
     console.log(`\n[MUR/moteur] STDP : replay=${(sStdp * 100).toFixed(0)}%  chaîne avant=[${fwdChain(stdp).map((w) => w.toFixed(1)).join("→")}]`);
-    // eslint-disable-next-line no-console
     console.log(`[MUR/moteur] Hebb : replay=${(sHebb * 100).toFixed(0)}%  chaîne avant=[${fwdChain(hebb).map((w) => w.toFixed(1)).join("→")}]`);
-    // eslint-disable-next-line no-console
     console.log(`[MUR/moteur] → mur ${sStdp >= 1 && sHebb < 0.5 ? "FRANCHI sur le vrai moteur ✅" : "non franchi"}\n`);
 
     expect(sStdp).toBe(1); // la STDP apprend la chaîne directionnelle → replay parfait

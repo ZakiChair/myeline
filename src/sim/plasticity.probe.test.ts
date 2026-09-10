@@ -81,7 +81,6 @@ describe("régime sous plasticité", () => {
       }
     }
     const fin = taux.slice(-3).reduce((a, b) => a + b, 0) / 3;
-    // eslint-disable-next-line no-console
     console.log(`plasticité active : profil=[${taux.map((x) => x.toFixed(4)).join(", ")}]`);
     expect(fin).toBeGreaterThan(TAUX_CIBLE * 0.3); // pas d'extinction
     expect(fin).toBeLessThan(TAUX_CIBLE * 3); // pas de crise
@@ -116,7 +115,6 @@ describe("régime sous plasticité", () => {
     }
     const apresActif = poidsEntrantMoyen(topo, terrActif);
     const apresMuet = poidsEntrantMoyen(topo, terrMuet);
-    // eslint-disable-next-line no-console
     console.log(
       `territoire stimulé ${avantActif.toFixed(4)}→${apresActif.toFixed(4)} ` +
         `(×${(apresActif / avantActif).toFixed(3)}) | silencieux ${avantMuet.toFixed(4)}→` +

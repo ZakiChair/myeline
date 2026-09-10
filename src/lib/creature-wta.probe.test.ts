@@ -92,15 +92,10 @@ describe("[GATE] payoff inhibition latérale (WTA) sur cues chevauchants", () =>
       const gi = makeGraph(true, 6); train(gi, s); winInh.push(discrWin(gi));
     }
     const mB = mean(base), mW = mean(win), mI = mean(winInh);
-    // eslint-disable-next-line no-console
     console.log(`\n[WTA] discrimination moyenne sur ${SEEDS.length} graines (overlap, 1=parfait) :`);
-    // eslint-disable-next-line no-console
     console.log(`  1-pas (baseline)      s̄=${mB.toFixed(2)}   (${base.map((d) => d.toFixed(1)).join(" ")})`);
-    // eslint-disable-next-line no-console
     console.log(`  fenêtre sans inh      s̄=${mW.toFixed(2)}   (${win.map((d) => d.toFixed(1)).join(" ")})`);
-    // eslint-disable-next-line no-console
     console.log(`  fenêtre AVEC inh      s̄=${mI.toFixed(2)}   (${winInh.map((d) => d.toFixed(1)).join(" ")})`);
-    // eslint-disable-next-line no-console
     console.log(`[WTA] → l'inhibition récupère : ${(mI - mW).toFixed(2)} vs fenêtre seule ; ${(mI - mB).toFixed(2)} vs baseline\n`);
     expect(Number.isFinite(mI)).toBe(true);
   });

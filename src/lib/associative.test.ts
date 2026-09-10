@@ -65,7 +65,6 @@ describe("mémoire associative (Palier 2)", () => {
     const pB = recallFraction(g, p, A, B);
     const pC = recallFraction(g, p, A, C);
     const delta = pB - pC;
-    // eslint-disable-next-line no-console
     console.log(`[Palier 2] rappel A→  P(B)=${pB.toFixed(2)}  P(C)=${pC.toFixed(2)}  Δ=${delta.toFixed(2)}`);
     expect(pB).toBeGreaterThanOrEqual(0.5); // B recruté
     expect(pC).toBeLessThanOrEqual(0.1); // témoin C silencieux

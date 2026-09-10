@@ -99,15 +99,10 @@ describe("[GATE] créature redessinée : apprentissage de contingence", () => {
       L.push(learned.delta); Y.push(yoked.delta); Rn.push(random.delta);
     }
     const mL = mean(L), mY = mean(Y), mR = mean(Rn);
-    // eslint-disable-next-line no-console
     console.log(`\n[GATE créature] moyennes sur ${SEEDS.length} graines :`);
-    // eslint-disable-next-line no-console
     console.log(`  APPRIS    Δ̄=${mL.toFixed(2)}   (par graine : ${L.map((d) => d.toFixed(1)).join(" ")})`);
-    // eslint-disable-next-line no-console
     console.log(`  YOKED     Δ̄=${mY.toFixed(2)}   (par graine : ${Y.map((d) => d.toFixed(1)).join(" ")})`);
-    // eslint-disable-next-line no-console
     console.log(`  ALÉATOIRE Δ̄=${mR.toFixed(2)}`);
-    // eslint-disable-next-line no-console
     console.log(`[GATE créature] → contingence APPRISE : ${mL >= 0.7 && mL > mY + 0.4 && mL > mR + 0.4 ? "OUI ✅" : "NON ❌"}\n`);
     expect(mL).toBeGreaterThanOrEqual(0.7); // l'appris apprend B de façon fiable
     expect(mL).toBeGreaterThan(mY + 0.4); // ≫ yoked (le reward seul n'explique pas)

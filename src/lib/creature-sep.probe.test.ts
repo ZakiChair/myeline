@@ -58,11 +58,8 @@ describe("[GATE] séparation d'entrée (couche granulaire de coïncidence)", () 
     const gL = activeG(g, cueL), gR = activeG(g, cueR);
     const rawOverlap = overlap(cueL, cueR); // 2 partagé sur 3 = 0.66
     const gOverlap = overlap(gL, gR);
-    // eslint-disable-next-line no-console
     console.log(`\n[SÉPARATION] overlap brut des cues : ${(rawOverlap * 100).toFixed(0)}%  (partagent le neurone 2)`);
-    // eslint-disable-next-line no-console
     console.log(`[SÉPARATION] G actifs cueL : {${gL.join(",")}}  cueR : {${gR.join(",")}}`);
-    // eslint-disable-next-line no-console
     console.log(`[SÉPARATION] overlap du code G : ${(gOverlap * 100).toFixed(0)}%  → séparation ${gOverlap < rawOverlap ? "RÉUSSIE ✅" : "échouée"}\n`);
     expect(gL.length).toBeGreaterThan(0);
     expect(gOverlap).toBeLessThan(rawOverlap);
@@ -80,11 +77,8 @@ describe("[GATE] séparation d'entrée (couche granulaire de coïncidence)", () 
     applyInput(g, cueL);
     stepScale(g, P, RNG, false);
     const gRefractoryT2 = G.every((s) => g.state[s] === 0); // G a déchargé en t1 → réfractaire en t2
-    // eslint-disable-next-line no-console
     console.log(`[PROFONDEUR] t1 : G déchargent=${gFiredT1}, actions déchargent=${actFiredT1} (la 2e couche a besoin d'un 2e tick)`);
-    // eslint-disable-next-line no-console
     console.log(`[PROFONDEUR] t2 : G réfractaires=${gRefractoryT2} → cue→G et G→action ne sont JAMAIS co-actifs au même tick`);
-    // eslint-disable-next-line no-console
     console.log(`[PROFONDEUR] → le Hebb modulé (co-activation même-tick) ne peut PAS créditer G→action : MÊME MUR que le NO-GO initial\n`);
     expect(gFiredT1).toBe(true);
     expect(actFiredT1).toBe(false); // l'action ne peut pas décharger en 1 tick à travers G

@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# artefacts d'outils locaux (logs de serveur, assets générés)
+/logs/
+/assets/

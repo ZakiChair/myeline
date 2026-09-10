@@ -12,7 +12,6 @@ import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPa
 import type { GraphData, NeuronNode } from "@/lib/types";
 import type { ThemeCanvas } from "@/lib/themes";
 
-const W_MAX = 14;
 const DYING_MS = 650;
 const SPHERE_GEO = new THREE.SphereGeometry(1, 12, 12);
 
@@ -45,10 +44,14 @@ export default function NeuralGraph3D({
   const [hover, setHover] = useState<NeuronNode | null>(null);
 
   // Refs lues par la boucle d'animation (toujours à jour sans la recréer).
+  // Synchronisées en effet, jamais pendant le rendu : leurs lecteurs (rAF,
+  // callbacks du graphe) tournent après le flush des effets.
   const dataRef = useRef(graphData);
-  dataRef.current = graphData;
   const themeRef = useRef(theme);
-  themeRef.current = theme;
+  useEffect(() => {
+    dataRef.current = graphData;
+    themeRef.current = theme;
+  });
 
   useEffect(() => {
     const el = containerRef.current;
@@ -145,7 +148,7 @@ export default function NeuralGraph3D({
     return mesh;
   }, []);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const linkColor = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (link: any) => {

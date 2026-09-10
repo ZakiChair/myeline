@@ -77,7 +77,6 @@ describe("vécu de l'organisme", () => {
       const r = vecu(2500, seed, 20_000);
       const actions = ACTIONS.map((a) => `${a}=${r.compte[a]}`).join(" ");
       const renc = r.org.metrics.ateFood + r.org.metrics.ateToxin;
-      // eslint-disable-next-line no-console
       console.log(
         `graine=${seed} décisions=${r.decisions} (dont ${r.parTimeout} par timeout) ` +
           `intervalle médian=${r.intervalleMedian} taux cortical=${r.tauxCortical.toFixed(4)}\n    ${actions}\n    ` +

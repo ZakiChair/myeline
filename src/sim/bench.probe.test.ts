@@ -29,7 +29,6 @@ describe("budget", () => {
     for (const n of [2500, 10_000, 50_000]) {
       const ticks = n >= 50_000 ? 1000 : 5000;
       const r = mesure(n, ticks);
-      // eslint-disable-next-line no-console
       console.log(`n=${n} e=${r.e} ${r.ms.toFixed(0)} ms → ${r.tps.toFixed(0)} ticks/s`);
     }
     expect(true).toBe(true); // banc de mesure
@@ -40,7 +39,6 @@ describe("budget", () => {
     // test qui décide s'il faut le repli sur un registre d'arêtes touchées.
     const normal = mesure(10_000, 5000);
     const rare = mesure(10_000, 5000, { dumpEvery: 256 });
-    // eslint-disable-next-line no-console
     console.log(
       `dumpEvery=16 → ${normal.tps.toFixed(0)} ticks/s | ` +
         `dumpEvery=256 → ${rare.tps.toFixed(0)} ticks/s | ` +

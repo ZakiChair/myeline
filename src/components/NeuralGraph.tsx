@@ -4,7 +4,7 @@
 // (excité / réfractaire / repos). Couleurs pilotées par le thème actif.
 // Importé en ssr:false.
 
-import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import ForceGraph2D from "react-force-graph-2d";
 import type { DroppedEdgeGhost, GraphData, NeuronNode } from "@/lib/types";
 import type { ThemeCanvas } from "@/lib/themes";
@@ -20,7 +20,8 @@ interface Props {
   onExcite: (id: number) => void;
   brushMode: boolean;
   fitToken: number;
-  droppedEdges: RefObject<DroppedEdgeGhost[]>;
+  /** Vue vivante des arêtes fantômes — fonction stable, contenu mutable. */
+  droppedEdges: () => DroppedEdgeGhost[];
   theme: ThemeCanvas;
 }
 
@@ -185,7 +186,7 @@ export default function NeuralGraph({
 
   const renderPost = useCallback(
     (ctx: CanvasRenderingContext2D, scale: number) => {
-      const ghosts = droppedEdges.current;
+      const ghosts = droppedEdges();
       if (!ghosts || ghosts.length === 0) return;
       const now = performance.now();
       ctx.save();

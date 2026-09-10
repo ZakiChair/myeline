@@ -18,7 +18,6 @@ import type {
   SimParams,
   Stats,
   TickEvents,
-  BirthEvent,
   NodeData,
   NeuronState,
 } from "./types";

@@ -86,7 +86,6 @@ export function ratioToxine(ts: Tranche[]): number {
 }
 
 function journaliser(nom: string, r: ReturnType<typeof experience>, detail = true) {
-  // eslint-disable-next-line no-console
   console.log(
     `${nom} vies=${r.org.metrics.lifetimes.length} ` +
       `médiane 1re moitié=${median(r.first).toFixed(1)} 2e moitié=${median(r.second).toFixed(1)} ` +
@@ -98,7 +97,6 @@ function journaliser(nom: string, r: ReturnType<typeof experience>, detail = tru
   );
   if (!detail) return;
   for (const [i, t] of r.parTranche.entries()) {
-    // eslint-disable-next-line no-console
     console.log(
       `    tranche ${i}: vies=${t.vies.length} médiane=${median(t.vies).toFixed(1)} ` +
         `food=${t.food} toxin=${t.toxin} énergie=${t.energie.toFixed(1)}`,

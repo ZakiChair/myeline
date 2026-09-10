@@ -45,12 +45,9 @@ describe("[SONDE] effet de l'inhibition E/I", () => {
     const ei = run(0.2);
     const fmt = (r: typeof exc) =>
       `activité≈${(r.meanFrac * 100).toFixed(1)}%  σ≈${r.sigma.toFixed(3)}  rythme(lag=${r.peak.lag}, corr=${r.peak.corr.toFixed(2)})`;
-    // eslint-disable-next-line no-console
     console.log("\n[SONDE E/I] 100% excitateur : " + fmt(exc));
-    // eslint-disable-next-line no-console
     console.log("[SONDE E/I] 80/20 E/I      : " + fmt(ei));
     const extinction = ei.meanFrac < 0.01;
-    // eslint-disable-next-line no-console
     console.log(
       `[SONDE E/I] → garde-fou activité : ${extinction ? "⚠️ EXTINCTION (σ non interprétable)" : "OK"} ; ` +
         `|σ−1| ${Math.abs(ei.sigma - 1) < Math.abs(exc.sigma - 1) ? "DIMINUE" : "n'améliore pas"} avec E/I ; ` +

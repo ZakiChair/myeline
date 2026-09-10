@@ -82,11 +82,8 @@ describe("[GATE] attaque du mur : STDP + arêtes orientées apprennent une séqu
     const stdp = makeNet(); train(stdp, "stdp", 4); const sStdp = replayScore(stdp);
     const hebb = makeNet(); train(hebb, "hebb", 4); const sHebb = replayScore(hebb);
     const wChain = (net: Net) => SEQ.slice(0, -1).map((i, k) => net.W[i * N + SEQ[k + 1]].toFixed(0)).join("→");
-    // eslint-disable-next-line no-console
     console.log(`\n[MUR] STDP : replay=${(sStdp * 100).toFixed(0)}%  poids chaîne 0→1→2→3 : [${wChain(stdp)}]`);
-    // eslint-disable-next-line no-console
     console.log(`[MUR] Hebb same-tick : replay=${(sHebb * 100).toFixed(0)}%  poids chaîne : [${wChain(hebb)}]`);
-    // eslint-disable-next-line no-console
     console.log(`[MUR] → la séquence temporelle est ${sStdp >= 1 && sHebb < 0.5 ? "APPRISE par STDP, PAS par Hebb ✅ (mur franchi en principe)" : "non franchie"}\n`);
     expect(sStdp).toBe(1); // STDP rejoue parfaitement la séquence
     expect(sHebb).toBeLessThan(0.5); // Hebb same-tick en est incapable

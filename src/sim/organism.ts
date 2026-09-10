@@ -69,22 +69,6 @@ export interface Organism {
   lastAction: MotorAction | null;
   /** Calendrier de dopamine émis — sert de source au témoin yoked. */
   daLog: number[];
-  /**
-   * Décharges cumulées de TOUT le réseau — capteurs, cortex, moteurs et VTA compris.
-   *
-   * ⚠️ Ce champ s'appelait `corticalSpikes` alors qu'il accumule `lif.spikeCount`, qui compte
-   * le réseau entier. Le nom a produit une mesure fausse au lot 0 : divisé par le seul effectif
-   * cortical, il surestimait le taux cortical de 23 % (0,0198 au lieu de 0,0161) et faisait
-   * conclure à tort que l'homéostasie n'atteignait pas sa consigne.
-   *
-   * Pour un taux PAR RÉGION, sommer `lif.spikeTotal[i]` sur les neurones de la région — c'est
-   * ce que fait `organism.probe.test.ts`, et c'est la mesure juste.
-   *
-   * ⚠️ SANS AUCUN LECTEUR dans le dépôt à la fin du lot 0 : il n'est écrit que par `stepOrganism`.
-   * Le lot 1 doit trancher — lui donner un consommateur, ou le supprimer. Laissé en place ici
-   * parce que c'est une décision de périmètre, pas une correction du lot 0.
-   */
-  spikesReseau: number;
 }
 
 export function createOrganism(p: OrganismParams, options: OrganismOptions = {}): Organism {
@@ -108,7 +92,6 @@ export function createOrganism(p: OrganismParams, options: OrganismOptions = {})
     rBar: 0,
     lastAction: null,
     daLog: [],
-    spikesReseau: 0,
   };
 }
 
@@ -160,7 +143,6 @@ export function stepOrganism(org: Organism, rng: RNG): { action: MotorAction | n
     recordEvent(org.metrics, pas.event, org.world.lastLifetime);
   }
   recordTick(org.metrics, org.world.energy, pas.reward);
-  org.spikesReseau += org.brain.lif.spikeCount;
 
   return { action, reward: pas.reward };
 }

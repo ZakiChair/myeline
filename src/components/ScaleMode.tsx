@@ -47,24 +47,25 @@ export function ScaleMode({ theme }: Props) {
   const [manualFit, setManualFit] = useState(0);
   const fit = useCallback(() => setManualFit((n) => n + 1), []);
 
+  const { toggleRun, stepOnce, reset, running } = sim;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
       if (target?.closest('input, textarea, [role="slider"], [data-slot="slider"]')) return;
       if (e.code === "Space") {
         e.preventDefault();
-        sim.toggleRun();
+        toggleRun();
       } else if (e.key === "s" || e.key === "S") {
-        if (!sim.running) sim.stepOnce();
+        if (!running) stepOnce();
       } else if (e.key === "r" || e.key === "R") {
-        sim.reset();
+        reset();
       } else if (e.key === "f" || e.key === "F") {
         fit();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [sim.toggleRun, sim.stepOnce, sim.reset, sim.running, fit]);
+  }, [toggleRun, stepOnce, reset, running, fit]);
 
   return (
     <main className="flex flex-1 flex-col lg:min-h-0 lg:flex-row">

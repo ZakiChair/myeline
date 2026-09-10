@@ -51,6 +51,7 @@ export function MyelineApp() {
   }, []);
 
   // Raccourcis clavier (mode Studio) : Espace, S, R, F.
+  const { toggleRun, stepOnce, reset, running } = sim;
   useEffect(() => {
     if (mode !== "studio") return;
     const onKey = (e: KeyboardEvent) => {
@@ -60,18 +61,18 @@ export function MyelineApp() {
       }
       if (e.code === "Space") {
         e.preventDefault();
-        sim.toggleRun();
+        toggleRun();
       } else if (e.key === "s" || e.key === "S") {
-        if (!sim.running) sim.stepOnce();
+        if (!running) stepOnce();
       } else if (e.key === "r" || e.key === "R") {
-        sim.reset();
+        reset();
       } else if (e.key === "f" || e.key === "F") {
         fit();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [mode, sim.toggleRun, sim.stepOnce, sim.reset, sim.running, fit]);
+  }, [mode, toggleRun, stepOnce, reset, running, fit]);
 
   return (
     <div
@@ -111,7 +112,7 @@ export function MyelineApp() {
               onExcite={sim.exciteNode}
               brushMode={brushMode}
               fitToken={sim.buildNonce + manualFit}
-              droppedEdges={sim.droppedEdges}
+              droppedEdges={sim.getDroppedEdges}
               theme={theme.canvas}
             />
           ) : (

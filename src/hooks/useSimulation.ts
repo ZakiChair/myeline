@@ -5,7 +5,7 @@
 // reheat du layout). DÉVELOPPEMENT tous les developEvery ticks (topologie qui
 // change → reconstruction de graphData).
 
-import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   createInitialGraph,
   step,
@@ -53,7 +53,8 @@ export interface SimController {
   speed: number;
   seed: number;
   buildNonce: number;
-  droppedEdges: RefObject<DroppedEdgeGhost[]>;
+  /** Vue vivante des arêtes fantômes (leur contenu mute sans notifier React). */
+  getDroppedEdges: () => DroppedEdgeGhost[];
   toggleRun: () => void;
   stepOnce: () => void;
   reset: () => void;
@@ -77,10 +78,16 @@ export function useSimulation(): SimController {
   const graphRef = useRef<SimGraph | null>(null);
   const nodesRef = useRef<Map<number, NeuronNode>>(new Map());
   const droppedEdgesRef = useRef<DroppedEdgeGhost[]>([]);
+  const getDroppedEdges = useCallback(() => droppedEdgesRef.current, []);
   const rngRef = useRef<RNG>(mulberry32(seed));
   const genRef = useRef(0);
   const paramsRef = useRef(params);
-  paramsRef.current = params;
+  // La ref suit l'état React en effet, jamais pendant le rendu : les lecteurs
+  // (build, stepOnce, reset…) sont des callbacks ou des effets, donc toujours
+  // servis après la synchronisation.
+  useEffect(() => {
+    paramsRef.current = params;
+  }, [params]);
 
   const rebuildGraphData = useCallback((g: SimGraph) => {
     const links = edgeList(g).map(([s, t, w]) => ({ source: s, target: t, weight: w }));
@@ -89,6 +96,9 @@ export function useSimulation(): SimController {
 
   const build = useCallback(
     (sd: number, p: SimParams) => {
+      // La graine vit au même endroit que le graphe qu'elle a engendré : chaque
+      // (re)construction met les deux à jour ensemble.
+      setSeed(sd);
       const rng = mulberry32(sd);
       const g = createInitialGraph(p, rng);
       rngRef.current = rng;
@@ -118,9 +128,7 @@ export function useSimulation(): SimController {
   );
 
   useEffect(() => {
-    const sd = randomSeed();
-    setSeed(sd);
-    build(sd, paramsRef.current);
+    build(randomSeed(), paramsRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -227,9 +235,7 @@ export function useSimulation(): SimController {
 
   const regenerate = useCallback(() => {
     setRunning(false);
-    const sd = randomSeed();
-    setSeed(sd);
-    build(sd, paramsRef.current);
+    build(randomSeed(), paramsRef.current);
   }, [build]);
 
   const setLiveParam = useCallback((key: keyof SimParams, value: number | boolean) => {
@@ -276,7 +282,7 @@ export function useSimulation(): SimController {
     speed,
     seed,
     buildNonce,
-    droppedEdges: droppedEdgesRef,
+    getDroppedEdges,
     toggleRun,
     stepOnce,
     reset,

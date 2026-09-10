@@ -73,10 +73,18 @@ export function useScaleSimulation(): ScaleController {
   const rngRef = useRef<RNG>(mulberry32(0));
   const genRef = useRef(0);
   const paramsRef = useRef(params);
-  paramsRef.current = params;
+  // La ref suit l'état React en effet, jamais pendant le rendu : les lecteurs
+  // (build, stepOnce, reset…) sont des callbacks ou des effets, donc toujours
+  // servis après la synchronisation.
+  useEffect(() => {
+    paramsRef.current = params;
+  }, [params]);
 
   const build = useCallback((sd: number, p: SimParams) => {
     setBuilding(true);
+    // La graine vit au même endroit que le graphe qu'elle a engendré : chaque
+    // (re)construction met les deux à jour ensemble.
+    setSeed(sd);
     // Laisse le navigateur peindre l'état « construction » avant un gros build.
     setTimeout(() => {
       const rng = mulberry32(sd);
@@ -93,9 +101,7 @@ export function useScaleSimulation(): ScaleController {
   }, []);
 
   useEffect(() => {
-    const sd = randomSeed();
-    setSeed(sd);
-    build(sd, paramsRef.current);
+    build(randomSeed(), paramsRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -129,9 +135,7 @@ export function useScaleSimulation(): ScaleController {
 
   const regenerate = useCallback(() => {
     setRunning(false);
-    const sd = randomSeed();
-    setSeed(sd);
-    build(sd, paramsRef.current);
+    build(randomSeed(), paramsRef.current);
   }, [build]);
 
   const setSize = useCallback(

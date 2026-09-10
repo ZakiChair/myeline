@@ -63,14 +63,11 @@ describe("GATE (a) — σ(φ) traverse-t-il 1 ?", () => {
       }
       rows.push([phi, sum / M]);
     }
-    // eslint-disable-next-line no-console
     console.log("\n[GATE a] σ(φ)  (avg degré ≈ " + (base.edgeCount * 2 / N).toFixed(1) + ")");
     for (const [phi, sigma] of rows) {
-      // eslint-disable-next-line no-console
       console.log(`  φ=${phi.toFixed(2)}  σ≈${sigma.toFixed(3)}  ${sigma >= 1 ? "≥1" : "<1"}`);
     }
     const crosses = rows.some(([, s]) => s >= 1) && rows.some(([, s]) => s < 1);
-    // eslint-disable-next-line no-console
     console.log(`  → σ(φ) traverse 1 dans la plage : ${crosses ? "OUI ✅" : "NON ❌"}\n`);
     for (const [, s] of rows) expect(Number.isFinite(s)).toBe(true);
   });
@@ -90,14 +87,10 @@ describe("GATE (b) — la plasticité déplace-t-elle σ vers 1 ?", () => {
     };
     const on = run(true);
     const off = run(false);
-    // eslint-disable-next-line no-console
     console.log("\n[GATE b] σ début→fin (⚠️ contaminé par spontaneous, illustratif)");
-    // eslint-disable-next-line no-console
     console.log(`  Hebb ON :  ${on.early.toFixed(3)} → ${on.late.toFixed(3)}  (|σ−1| fin = ${Math.abs(on.late - 1).toFixed(3)})`);
-    // eslint-disable-next-line no-console
     console.log(`  Hebb OFF:  ${off.early.toFixed(3)} → ${off.late.toFixed(3)}  (|σ−1| fin = ${Math.abs(off.late - 1).toFixed(3)})`);
     const closer = Math.abs(on.late - 1) < Math.abs(off.late - 1);
-    // eslint-disable-next-line no-console
     console.log(`  → la plasticité rapproche σ de 1 (fin) : ${closer ? "OUI ✅" : "NON ❌"}\n`);
     expect(Number.isFinite(on.late) && Number.isFinite(off.late)).toBe(true);
   });

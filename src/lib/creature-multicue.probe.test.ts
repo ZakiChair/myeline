@@ -92,13 +92,9 @@ describe("[GATE] discrimination multi-cue : disjoint vs chevauchant", () => {
     const ov = scenario(OVERLAP);
     const line = (name: string, r: { mL: number; mY: number; mR: number }) =>
       `  ${name.padEnd(11)} appris s̄=${r.mL.toFixed(2)}  yoked s̄=${r.mY.toFixed(2)}  aléatoire s̄=${r.mR.toFixed(2)}`;
-    // eslint-disable-next-line no-console
     console.log(`\n[GATE multi-cue] discrimination moyenne sur ${SEEDS.length} graines (1 = parfait) :`);
-    // eslint-disable-next-line no-console
     console.log(line("DISJOINT", dj));
-    // eslint-disable-next-line no-console
     console.log(line("CHEVAUCHANT", ov) + `   (par graine appris : ${ov.L.map((d) => d.toFixed(1)).join(" ")})`);
-    // eslint-disable-next-line no-console
     console.log(`[GATE multi-cue] → interférence due au chevauchement : ${(dj.mL - ov.mL).toFixed(2)} de perte de discrimination${ov.mL < 0.6 ? "  ⚠️ (l'inhibition latérale pourrait aider)" : ""}\n`);
     expect(Number.isFinite(dj.mL) && Number.isFinite(ov.mL)).toBe(true);
   });
