@@ -22,6 +22,12 @@ const REGION_COLORS: Record<RegionId, number> = {
   CORTEX: 0x3a4d8f,
   MOTOR: 0xf5f5f5,
   VTA: 0xff5cf2,
+  // Voie olfactive (lot 1 de la refonte).
+  GLOM: 0x3ddc84,
+  KC: 0x3a4d8f,
+  APL: 0xff5c5c,
+  GUST: 0xffb84d,
+  MBON: 0xf5f5f5,
 };
 
 const VERT = /* glsl */ `

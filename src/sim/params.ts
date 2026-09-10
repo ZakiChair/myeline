@@ -33,7 +33,13 @@ export type RegionId =
   | "INTERO"
   | "CORTEX"
   | "MOTOR"
-  | "VTA";
+  | "VTA"
+  // Voie olfactive (lot 1 de la refonte) — noms de structures, pas d'animal.
+  | "GLOM"
+  | "KC"
+  | "APL"
+  | "GUST"
+  | "MBON";
 
 export interface Region {
   id: RegionId;
@@ -345,4 +351,72 @@ export const ORGANISME_DEFAUT: OrganismParams = {
   world: MONDE_DEFAUT,
   tauReward: 400,
   worldSeed: 12345,
+};
+
+// ─── La voie olfactive (lot 1 de la refonte) ────────────────────────────────────────────
+//
+// Glomérules → cellules de Kenyon → neurone de sortie, plus la rétroaction APL qui impose
+// la sparsité DANS le tick (remplace l'homéostasie, §5.5 de la spec) et la voie gustative
+// qui porte le stimulus inconditionné et le réflexe inné. Pas de récurrence : la couche
+// plastique (KC → sortie) est en aval, la stabilité est structurelle.
+//
+// STATUT des effectifs : chaque valeur porte son statut dans le commentaire. « inventé »
+// est assumé ; « réduit » signifie ramené à l'échelle du banc depuis un chiffre publié.
+
+export interface VoieParams {
+  /** Taille totale visée. */
+  n: number;
+  seed: number;
+  /** Glomérules. Publié ≈ 160 ; réduit au banc. */
+  nGlom: number;
+  /** Neurones de projection par glomérule. Publié ≈ 5–6 ; réduit au banc. */
+  pnParGlom: number;
+  /** Neurones de sortie (MBON). Publié ≈ 400 ; 1 suffit pour le réflexe harnaché. */
+  nMBON: number;
+  /** Afférences gustatives (voie du stimulus inconditionné). Inventé. */
+  nGust: number;
+  /** Glomérules échantillonnés par cellule de Kenyon. Publié ≈ 5–10 (drosophile). */
+  kAff: number;
+  /** Neurones de sortie contactés par cellule de Kenyon. INVENTÉ (spec §11, ouvert). */
+  kOut: number;
+  /**
+   * Gain de la boucle APL : règle la sparsité du code des cellules de Kenyon de façon
+   * monotone (mesuré §5.5 : gain 8 → ≈ 4 %). BORNÉ : l'alternance n'apparaît qu'à ≈ 12× le
+   * gain utile (mesuré) — ne pas dépasser 50.
+   */
+  gainAPL: number;
+  /** Poids fixe glomérule → cellule de Kenyon. À calibrer (régime). */
+  wGK: number;
+  /** Poids fixe cellule de Kenyon → APL. À calibrer (régime). */
+  wKA: number;
+  /** Poids initial KC → MBON, la couche plastique. À calibrer (taux spontané). */
+  w0: number;
+  /** Poids fixe gustatif → MBON : le réflexe inconditionnel, inné et fort. À calibrer. */
+  wGust: number;
+  /** Délai axonal maximal, en ticks. */
+  delayMax: number;
+  wMax: number;
+}
+
+export const VOIE_DEFAUT: VoieParams = {
+  n: 2_500,
+  seed: 1,
+  nGlom: 40,
+  pnParGlom: 4,
+  nMBON: 1,
+  nGust: 8,
+  kAff: 10,
+  kOut: 20,
+  // MESURÉ au banc (sonde _calibre, 2026-07-30) : gain 20 → ≈ 3,5 % de décharge KC sous
+  // odeur, dans la cible publiée 4–7 %.
+  gainAPL: 20,
+  wGK: 0.35,
+  wKA: 0.05,
+  // MESURÉ : à 0,05 la sortie sature sous odeur naïve (le contrôle UR devenait
+  // indiscernable du niveau spontané) ; à 0,003 la réponse naïve reste basse et la
+  // potentialisation a toute la marge jusqu'à wMax.
+  w0: 0.003,
+  wGust: 0.9,
+  delayMax: resoudreDelaiMax(DT_DEFAUT).delayMax,
+  wMax: 3.0,
 };

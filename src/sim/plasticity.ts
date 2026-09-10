@@ -38,15 +38,35 @@ export interface PlasticityState {
   lut: Float32Array;
   /** [n] valeur de spikeTotal au dernier passage de l'homéostasie. */
   spikeAtLastHomeo: Int32Array;
+  /**
+   * [e] 1 = l'arête peut porter de l'éligibilité. null = toutes les arêtes à source
+   * excitatrice (comportement du lot 0). Le confinement à une seule couche — cellules de
+   * Kenyon → neurones de sortie — est la correction structurelle du lot 1 de la refonte.
+   */
+  plastFlag: Uint8Array | null;
+  /**
+   * Liste compacte des arêtes plastiques : le déversement dopaminergique ne balaie qu'elle
+   * quand elle existe, au lieu de tout le CSR sortant.
+   */
+  plastSet: Int32Array | null;
   daAccum: number;
   lastDump: number;
   lastHomeo: number;
 }
 
-export function createPlasticity(topo: Topology, p: PlasticityParams): PlasticityState {
+export function createPlasticity(
+  topo: Topology,
+  p: PlasticityParams,
+  plastSet: Int32Array | null = null,
+): PlasticityState {
   const taille = 4 * p.tauElig + 1;
   const lut = new Float32Array(taille);
   for (let k = 0; k < taille; k++) lut[k] = k >= 4 * p.tauElig ? 0 : Math.exp(-k / p.tauElig);
+  let plastFlag: Uint8Array | null = null;
+  if (plastSet !== null) {
+    plastFlag = new Uint8Array(topo.e);
+    for (let q = 0; q < plastSet.length; q++) plastFlag[plastSet[q]] = 1;
+  }
   return {
     preTrace: new Float32Array(topo.n),
     postTrace: new Float32Array(topo.n),
@@ -54,6 +74,8 @@ export function createPlasticity(topo: Topology, p: PlasticityParams): Plasticit
     lastTouch: new Int32Array(topo.e),
     lut,
     spikeAtLastHomeo: new Int32Array(topo.n),
+    plastFlag,
+    plastSet,
     daAccum: 0,
     lastDump: 0,
     lastHomeo: 0,
@@ -90,6 +112,7 @@ export function accumulateEligibility(
     if (topo.sign[i] !== 1) continue;
     const fin = topo.outOffsets[i + 1];
     for (let e = topo.outOffsets[i]; e < fin; e++) {
+      if (ps.plastFlag !== null && ps.plastFlag[e] === 0) continue;
       const post = ps.postTrace[topo.outTarget[e]];
       if (post === 0) continue;
       toucher(ps, e, t);
@@ -104,9 +127,10 @@ export function accumulateEligibility(
     for (let q = topo.inOffsets[j]; q < fin; q++) {
       const src = topo.inSource[q];
       if (topo.sign[src] !== 1) continue;
+      const e = topo.inEdge[q];
+      if (ps.plastFlag !== null && ps.plastFlag[e] === 0) continue;
       const pre = ps.preTrace[src];
       if (pre === 0) continue;
-      const e = topo.inEdge[q];
       toucher(ps, e, t);
       ps.elig[e] += p.aPlus * pre;
     }
@@ -149,11 +173,35 @@ export function addDopamine(
   const d = ps.daAccum;
   ps.daAccum = 0;
   ps.lastDump = t;
+  // Une marque d'éligibilité n'est consommée que par une VRAIE consolidation (d ≠ 0) :
+  // un déversement à dopamine nulle ne doit pas l'effacer — sinon la fenêtre de crédit
+  // effective vaut dumpEvery, pas tauElig. Mesuré au lot 1 de la refonte : avec la remise
+  // à zéro inconditionnelle, l'éligibilité d'un CS mourait tous les 250 ticks et l'ISI de
+  // 3 000 n'était jamais franchi par la marque, seulement par la trace directe.
+  const consomme = d !== 0;
 
-  // Balayage par source : on retrouve le signe sans tableau `edgeSource` supplémentaire
-  // (12 Mo économisés à n = 50 000). Les arêtes inhibitrices n'accumulent jamais
-  // d'éligibilité, donc les sauter ne perd rien.
   const gain = p.lr * d;
+
+  // Plasticité confinée : on ne balaie que l'ensemble déclaré (lot 1 — une seule couche
+  // apprend). Hors confinement, balayage par source : on retrouve le signe sans tableau
+  // `edgeSource` supplémentaire (12 Mo économisés à n = 50 000), et les arêtes inhibitrices
+  // n'accumulent jamais d'éligibilité, donc les sauter ne perd rien.
+  if (ps.plastSet !== null) {
+    const set = ps.plastSet;
+    for (let q = 0; q < set.length; q++) {
+      const e = set[q];
+      const el = toucher(ps, e, t);
+      if (observer) observer(e, el);
+      if (el === 0) continue;
+      let nw = topo.w[e] + gain * el;
+      if (nw < 0) nw = 0;
+      else if (nw > p.wMax) nw = p.wMax;
+      topo.w[e] = nw;
+      if (consomme) ps.elig[e] = 0;
+    }
+    return true;
+  }
+
   for (let i = 0; i < topo.n; i++) {
     if (topo.sign[i] !== 1) continue;
     const fin = topo.outOffsets[i + 1];
@@ -165,7 +213,7 @@ export function addDopamine(
       if (nw < 0) nw = 0;
       else if (nw > p.wMax) nw = p.wMax;
       topo.w[e] = nw;
-      ps.elig[e] = 0;
+      if (consomme) ps.elig[e] = 0;
     }
   }
   return true;

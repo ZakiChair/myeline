@@ -44,8 +44,13 @@ Branche de travail : refonte « voie olfactive » (spec `2026-07-30-myeline-abei
 - **Résultat négatif assumé** : le lot 1 « vie » n'a pas démontré d'apprentissage
   (l'homéostasie produisait 93–96 % du mouvement synaptique). Diagnostic et refonte dans
   les specs.
-- **À venir** : lot 1 « voie olfactive » (porte : courbe d'acquisition de Bitterman),
-  puis échelle complète.
+- **Fait** : lot 1 « voie olfactive » — **la porte est passée** (sonde
+  `voie.probe.test.ts`) : glomérules → cellules de Kenyon → neurone de sortie + APL,
+  plasticité confinée à la couche de sortie, harnais PER. Courbe d'acquisition
+  0 % → 100 %, témoins non apparié / inversé / gelé plats, Fisher p = 1,66·10⁻⁹.
+  Mesures et limites : `docs/superpowers/notes/2026-07-31-voie-olfactive-lot1.md`.
+- **À venir** : généralisation (calibration de l'espace d'odeurs), discrimination
+  A+/B−, SER aversif, puis échelle complète.
 
 ⚠️ Le mot « abeille » n'apparaît ni dans le code ni dans l'interface avant que le lot 3
 soit passé (règle de nommage décidée le 2026-07-30).
