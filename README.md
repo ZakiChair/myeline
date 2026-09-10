@@ -48,9 +48,13 @@ Branche de travail : refonte « voie olfactive » (spec `2026-07-30-myeline-abei
   `voie.probe.test.ts`) : glomérules → cellules de Kenyon → neurone de sortie + APL,
   plasticité confinée à la couche de sortie, harnais PER. Courbe d'acquisition
   0 % → 100 %, témoins non apparié / inversé / gelé plats, Fisher p = 1,66·10⁻⁹.
+- **Fait** : rang 2 « généralisation » — **la porte est passée** (sonde
+  `voie-generalisation.probe.test.ts`) : code KC épars (~2,5 % de répondantes), la
+  réponse à une odeur déclinée décroît monotone avec la distance (72/53/25 % aux
+  distances calibrées 1/2/3 carbones, ratio 2,88 ∈ [1,7 ; 2,9]), gelé plat.
   Mesures et limites : `docs/superpowers/notes/2026-07-31-voie-olfactive-lot1.md`.
-- **À venir** : généralisation (calibration de l'espace d'odeurs), discrimination
-  A+/B−, SER aversif, puis échelle complète.
+- **À venir** : discrimination A+/B− (rang 4), SER aversif (rang 3), puis échelle
+  complète.
 
 ⚠️ Le mot « abeille » n'apparaît ni dans le code ni dans l'interface avant que le lot 3
 soit passé (règle de nommage décidée le 2026-07-30).

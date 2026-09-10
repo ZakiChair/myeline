@@ -15,7 +15,7 @@ import {
   injecterOdeur,
   stepVoie,
 } from "./voie";
-import { genererOdeur } from "./tasks/odors";
+import { actifs, declinerN, distanceOdeur, genererOdeur } from "./tasks/odors";
 
 const cfg = (over = {}) => ({ ...VOIE_DEFAUT, n: 1_200, ...over });
 
@@ -130,6 +130,22 @@ describe("dynamique", () => {
       if (flag[e] === 0 && v.topo.w[e] !== w0[e]) deplaceesHorsSet++;
     }
     expect(deplaceesHorsSet).toBe(0);
+  });
+});
+
+describe("espace d'odeurs — déclinaisons (rang 2)", () => {
+  it("declinerN remplace exactement n glomérules actifs", () => {
+    const rng = mulberry32(21);
+    const A = genererOdeur(rng, 160, "A");
+    const nA = actifs(A).length;
+    const B = declinerN(rng, A, 10, "B");
+    expect(actifs(B).length).toBe(nA);
+    // La distance mesurée = fraction des actifs de A absents de B.
+    expect(distanceOdeur(A, B)).toBeCloseTo(10 / nA, 5);
+    const C = declinerN(rng, A, nA, "C");
+    expect(distanceOdeur(A, C)).toBe(1); // disjointe
+    const D = declinerN(rng, A, 0, "D");
+    expect(distanceOdeur(A, D)).toBe(0);
   });
 });
 

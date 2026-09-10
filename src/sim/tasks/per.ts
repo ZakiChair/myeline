@@ -49,7 +49,9 @@ export interface PerParams {
 
 export const PER_DEFAUT: PerParams = {
   env: { miseEnPlace: 2_000, csDuree: 4_000, isi: 3_000, usDuree: 3_000, apres: 2_000 },
-  injectOdeur: 1.2,
+  // MESURÉ (rang 2) : à 1,2 le code KC était dense (~35 % de répondantes) ; à 0,6 le
+  // code devient épars et sélectif pour l'odeur.
+  injectOdeur: 0.6,
   injectGust: 1.5,
   daUS: 0.02,
   margeITI: 2_000,

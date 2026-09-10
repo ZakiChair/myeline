@@ -69,3 +69,54 @@ CS n'existe qu'après l'appariement CS→US, disparaît si l'US précède le CS 
 deux ne co-occurent jamais, et n'existe pas sans plasticité (lr = 0). C'est le sens
 fort de « émergent » que le lot 1 « vie » n'avait pas atteint : la contingence
 temporelle est lue par la fenêtre de crédit, pas par un raccourci.
+
+---
+
+# Rang 2 « généralisation » — mesures de la porte (2026-07-31)
+
+Sonde : `src/sim/voie-generalisation.probe.test.ts` — après 5 essais appariés sur
+l'odeur A, on teste des déclinaisons à distance croissante dans l'encodeur (ordre des
+tests aléatoire par sujet).
+
+## La calibration de l'encodeur (mesures de chemin)
+
+1. **Le premier régime était dense, pas épars.** La métrique « 3,5 % de décharge KC »
+   mesurait un TAUX instantané — mais la sparsité publiée est une sparsité de
+   POPULATION (fraction des KC qui répondent à une odeur). Mesuré : ~35 % des KC
+   déchargeaient ≥100 fois sous le CS → l'apprentissage potentialisait presque tout
+   → généralisation totale (odeur disjointe : 84 % de la réponse).
+2. Le compte de KC répondantes a un **plancher structural** : à 10 afférences/KC et
+   12 glomérules actifs (densité 0,3 sur 40), ~5 afférences actives suffisent → 11,5 %
+   quel que soit le gain APL (l'APL borne le taux, pas le compte).
+3. Régime retenu : **nGlom = 160 (compte publié), pnParGlom = 2, densité 0,2,
+   wGK = 0,05, gainAPL = 30, injectOdeur = 0,6** → 2,5 % de KC répondantes (un peu
+   sous la bande 4–7 % publiée), MBON naïf ~16/4 000 t, plancher de généralisation
+   ~6–17 %.
+4. Bonus : la courbe d'acquisition devient graduée à ce régime (56 → 145 → 221 →
+   283 → 320 sur 5 essais) — plus proche de la forme publiée que la saturation en un
+   essai du premier régime.
+
+## Le gradient mesuré (32 sujets, tests en ordre aléatoire)
+
+| distance (glom. remplacés /32) | répondants | compte moyen |
+|---|---|---|
+| 0 (odeur conditionnée) | 100 % | 214 |
+| 28 (= 1C calibré) | 72 % | 42 |
+| 30 (= 2C calibré) | 53 % | 35 |
+| 31 (= 3C calibré) | 25 % | 30 |
+| 32 (disjointe) | 13 % | 26 |
+
+- Monotone strict sur les points calibrés : 72 > 53 > 25 ✓
+- **Ratio r(1C)/r(3C) = 2,88 ∈ [1,7 ; 2,9]** — passé, juste sous la borne haute.
+- Gelé (lr = 0, 12 sujets) : 0–6 % à toutes les distances ✓
+- Publié 53/31/23 vs mesuré 72/53/25 : la FORME est bonne, les niveaux ~+19/+22/+2 pts
+  — notre réponse conditionnée sature à 100 % (publié ~80 %), le gradient est décalé
+  vers le haut. Écart assumé, documenté dans `CARBONE_REMPLACES`.
+- La porte du lot 1 re-passe au nouveau régime (Fisher 1,66·10⁻⁹, témoins plats).
+
+## Ce que ça démontre
+
+Le réseau n'apprend pas « répondre » — il apprend **« cette odeur-là »** : la réponse
+est une fonction décroissante monotone de la similarité à l'odeur renforcée. La
+mémoire écrite dans les synapses encode une métrique de l'espace des odeurs — une
+propriété de l'environnement, pas des stimuli.

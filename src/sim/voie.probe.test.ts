@@ -35,7 +35,8 @@ function lancer(conditions: ConditionId[], lr: number): ResultatProtocole {
     nSujets: N_SUJETS,
     nEssais: N_ESSAIS,
     conditions,
-    voie: { ...VOIE_DEFAUT, n: N_VOIE, gainAPL: 20, w0: 0.003 },
+    // Régime calibré du rang 2 : les défauts portent le code épars mesuré.
+    voie: { ...VOIE_DEFAUT, n: N_VOIE },
     lif: LIF_DEFAUT,
     plast: { ...PLASTICITE_DEFAUT, lr },
     per: PER_DEFAUT,

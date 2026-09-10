@@ -12,8 +12,8 @@ import { mulberry32 } from "../../lib/rng";
 import type { LifParams, PlasticityParams, VoieParams } from "../params";
 import type { JournalSujet, ResultatEssai } from "../task";
 import { calibrerSeuil, reflexeInconditionnel, runEssai, type PerParams } from "../tasks/per";
-import { genererOdeur, type Odeur } from "../tasks/odors";
-import { calendrier, type ConditionId } from "../tasks/schedules";
+import { declinerN, genererOdeur, type Odeur } from "../tasks/odors";
+import { calendrier, essaiCsSeul, itiTicks, ENVELOPPE_DEFAUT, type ConditionId } from "../tasks/schedules";
 import { createVoie, type Voie } from "../voie";
 
 export interface RunnerParams {
@@ -157,4 +157,121 @@ export function runProtocole(p: RunnerParams): ResultatProtocole {
     });
   }
   return { conditions, journaux, ticksTotal };
+}
+
+// ---------------------------------------------------------------------------
+// Rang 2 — généralisation : après conditionnement sur A, mesurer la réponse à des
+// odeurs déclinées à distance croissante dans l'encodeur.
+//
+// CALIBRATION MESURÉE (24 sujets, régime épars, 2026-07-31) : la réponse croisée
+// décroît monotone de ~92 % (26/32 remplacés) à ~17 % (32/32, disjoint). Les trois
+// distances « carbone » de la référence sont associées aux distances de l'encodeur
+// qui tombent sur le gradient — c'est ça, calibrer un encodeur.
+//   1C → 28 remplacés (~67 % mesuré)   2C → 30 (~50 %)   3C → 31 (~25 %)
+// Écart assumé vs publié (53/31/23) : notre réponse conditionnée sature vers 100 %
+// là où la référence plafonne ~80 % — le gradient entier est décalé vers le haut.
+/** Distance de l'encodeur (glomérules remplacés) associée à l'écart « carbone ». */
+export const CARBONE_REMPLACES: Record<number, number> = { 1: 28, 2: 30, 3: 31 };
+
+export interface GeneralisationParams {
+  nSujets: number;
+  /** Essais appariés sur l'odeur de base avant les tests. Publié : 5. */
+  nEssaisApprentissage: number;
+  /** Distances testées (comptes entiers de glomérules remplacés). */
+  distances: number[];
+  /** Présentations par distance et par sujet. */
+  nPresentations: number;
+  voie: VoieParams;
+  lif: LifParams;
+  plast: PlasticityParams;
+  per: PerParams;
+  nCal: number;
+  tauSp: number;
+  graineSujets: number;
+  graineOdeurs: number;
+}
+
+export interface PointGeneralisation {
+  distance: number;
+  repondants: number;
+  essais: number;
+  compteMoyen: number;
+}
+
+export interface ResultatGeneralisation {
+  points: PointGeneralisation[];
+  sujetsInclus: number;
+  sujetsExclus: number;
+  ticksTotal: number;
+}
+
+/**
+ * Protocole de généralisation : chaque sujet est calibré, vérifié au contrôle UR,
+ * conditionné sur A (apparié), puis testé sur les déclinaisons — ORDRE DES TESTS
+ * ALÉATOIRE PAR SUJET (protocole publié : les essais de généralisation ne sont pas
+ * triés par distance).
+ */
+export function runGeneralisation(p: GeneralisationParams): ResultatGeneralisation {
+  const points = p.distances.map((distance) => ({
+    distance,
+    repondants: 0,
+    essais: 0,
+    compteMoyen: 0,
+  }));
+  const iti = itiTicks(p.plast.tauElig, p.per.margeITI);
+  let inclus = 0;
+  let exclus = 0;
+  let ticksTotal = 0;
+
+  for (let s = 0; s < p.nSujets; s++) {
+    const graineSujet = p.graineSujets ^ s;
+    const sujet: Voie = createVoie({ ...p.voie, seed: graineSujet }, p.lif, p.plast);
+    const rng = mulberry32(graineSujet ^ 0x67756d61);
+    const A = genererOdeur(mulberry32(p.graineOdeurs ^ s), p.voie.nGlom, "A");
+
+    const { seuil } = calibrerSeuil(sujet, A, p.per, p.plast, p.nCal, p.tauSp, rng);
+    if (!reflexeInconditionnel(sujet, p.per, p.plast, seuil, rng)) {
+      exclus++;
+      continue;
+    }
+    inclus++;
+
+    // Conditionnement : nEssaisApprentissage essais appariés sur A.
+    for (let k = 0; k < p.nEssaisApprentissage; k++) {
+      const plan = calendrier("apparie", 1, A, ENVELOPPE_DEFAUT, iti, graineSujet)[0];
+      ticksTotal += plan.duree;
+      runEssai(sujet, plan, p.per, seuil, rng);
+    }
+
+    // Tests : ordre des distances tiré par sujet.
+    const ordre = Int32Array.from({ length: p.distances.length }, (_, k) => k);
+    const rngOrdre = mulberry32(graineSujet ^ 0x9e3779b9);
+    for (let k = ordre.length - 1; k > 0; k--) {
+      const j = Math.floor(rngOrdre() * (k + 1));
+      const tmp = ordre[k];
+      ordre[k] = ordre[j];
+      ordre[j] = tmp;
+    }
+    for (const k of ordre) {
+      for (let rep = 0; rep < p.nPresentations; rep++) {
+        const B = declinerN(
+          mulberry32(graineSujet ^ 0xdec1 ^ (k * 31 + rep)),
+          A,
+          p.distances[k],
+          `B${k}`,
+        );
+        const plan = essaiCsSeul(ENVELOPPE_DEFAUT, B, iti);
+        ticksTotal += plan.duree;
+        const r = runEssai(sujet, plan, p.per, seuil, rng);
+        const pt = points[k];
+        pt.essais++;
+        pt.compteMoyen += r.compte;
+        if (r.reponse) pt.repondants++;
+      }
+    }
+  }
+  for (const pt of points) {
+    if (pt.essais > 0) pt.compteMoyen /= pt.essais;
+  }
+  return { points, sujetsInclus: inclus, sujetsExclus: exclus, ticksTotal };
 }

@@ -401,16 +401,20 @@ export interface VoieParams {
 export const VOIE_DEFAUT: VoieParams = {
   n: 2_500,
   seed: 1,
-  nGlom: 40,
-  pnParGlom: 4,
+  // MESURÉ (rang 2) : le compte publié est ~160 glomérules — il donne une résolution
+  // de distance au glomérule (32 actifs à densité 0,2), indispensable pour le
+  // gradient de généralisation.
+  nGlom: 160,
+  pnParGlom: 2,
   nMBON: 1,
   nGust: 8,
   kAff: 10,
   kOut: 20,
-  // MESURÉ au banc (sonde _calibre, 2026-07-30) : gain 20 → ≈ 3,5 % de décharge KC sous
-  // odeur, dans la cible publiée 4–7 %.
-  gainAPL: 20,
-  wGK: 0.35,
+  // MESURÉ : à wGK 0,05 / densité 0,2 / gainAPL 30, ≈ 2,5 % des KC répondent à une
+  // odeur (cible publiée ~4–7 %, le nôtre un peu plus épars) et la sortie naïve reste
+  // basse sans s'éteindre.
+  gainAPL: 30,
+  wGK: 0.05,
   wKA: 0.05,
   // MESURÉ : à 0,05 la sortie sature sous odeur naïve (le contrôle UR devenait
   // indiscernable du niveau spontané) ; à 0,003 la réponse naïve reste basse et la
