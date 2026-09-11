@@ -63,8 +63,17 @@ Branche de travail : refonte « voie olfactive » (spec `2026-07-30-myeline-abei
   des lésions** : canal OA coupé → PER mort / SER vivant ; canal DA coupé →
   SER mort / PER vivant. Réflexes innés intacts sous toute lésion.
   Mesures et limites : `docs/superpowers/notes/2026-07-31-voie-olfactive-lot1.md`.
-- **À venir** : échelle complète (n publié), puis réinjection de la voie dans le
-  monde — la boucle se referme sur l'organisme libre.
+- **Fait** : rang 5 « réinjection dans le monde » — **la porte est passée** (sonde
+  `_voie-monde.probe.test.ts`) : la voie en module optionnel de l'organisme libre.
+  Nourriture → OA/MBON (approche), toxine → DA/SER (évitement), prédateur → ALARM
+  seul. L'attribution causale exige l'étiquette d'odeur sur l'éligibilité
+  (`eligOdeur`) + trace de stimulus (`eligTrace`) — dans l'arène dense la dominance
+  au contact est ~50/50, le temps seul ne sépare pas la cause. Mesuré : w(SER)
+  toxine ≫ nourriture (30–120×), w(MBON) nourriture ≫ toxine, réponses sondées
+  sélectives ~3,5×, ~2–3× moins de toxines consommées qu'à module gelé, lésions
+  dissociées, reproductible bit-identique. Le cortex homéostatique reste le
+  témoin interne.
+- **À venir** : échelle complète (n publié).
 
 ⚠️ Le mot « abeille » n'apparaît ni dans le code ni dans l'interface avant que le lot 3
 soit passé (règle de nommage décidée le 2026-07-30).

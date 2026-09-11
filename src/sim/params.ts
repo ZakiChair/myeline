@@ -191,6 +191,21 @@ export interface PlasticityParams {
   dumpEvery: number;
   /** |dopamine accumulée| au-delà de laquelle on déverse sans attendre la cadence. */
   dumpNow: number;
+  /** Porte de fraîcheur à la consolidation : une arête plastique confinée ne
+   *  consolide que si sa source a une trace pré ≥ ce seuil. 0 = inactif (défaut
+   *  historique). Rang 5 — borne le crédit à l'odeur causale dans le monde dense. */
+  fraisMin: number;
+  /** Plancher d'éligibilité à la consolidation : |marque| en dessous ne bouge pas.
+   *  Rang 5 — les répondeurs faibles et le tir spontané écrivent des marques
+   *  ~10× moindres que les répondeurs forts de l'odeur causale ; sans plancher,
+   *  tout sature à wMax et la sortie apprise perd sa sélectivité (mesuré). */
+  seuilElig: number;
+  /** Trace de stimulus : pour un ensemble plastique confiné, écrit l'éligibilité
+   *  à partir de la trace pré SEULE — « cette KC était active sous cette odeur » —
+   *  sans exiger que la cible décharge (elle ne peut pas répondre à l'odeur avant
+   *  de l'avoir apprise). Rang 5 : dans le monde, le post naïf tire trop rarement
+   *  pour écrire des marques denses — mesuré : elig ~0,02 uniforme, sans contraste. */
+  eligTrace: boolean;
   /** Cadence de l'homéostasie, en ticks. */
   homeoEvery: number;
   /** Vigueur de la mise à l'échelle homéostatique. */
@@ -340,6 +355,48 @@ export const CERVEAU_DEFAUT: BrainParams = {
 
 // ─── L'organisme ────────────────────────────────────────────────────────────────────────
 
+/**
+ * La voie olfactive greffée à l'organisme libre (rang 5 — la boucle se referme).
+ *
+ * Le monde émet déjà deux canaux olfactifs indiscernables a priori (même encodage,
+ * même portée — `world.ts`) ; le module les lit comme deux CS : le canal nourriture
+ * porte l'odeur A, le canal toxine l'odeur B. Les sorties du module ajoutent de la
+ * preuve aux accumulateurs : MBON → AVANCER (approche), SER → STOP (évitement).
+ * Les événements du monde renforcent chacun leur canal : FOOD → OA, TOXIN → DA.
+ * Le prédateur ne renforce PAS la voie — son CS est le canal ALARM, pas une odeur
+ * (mesuré : sinon la nourriture se consolidait en aversif, les coups tombant
+ * souvent près de la nourriture). Le cortex et sa plasticité diffuse restent
+ * intacts — c'est le
+ * témoin interne : seule la voie est mesurée apprendre.
+ */
+export interface VoieMondeParams {
+  actif: boolean;
+  voie: VoieParams;
+  lif: LifParams;
+  plast: PlasticityParams;
+  /** Preuve ajoutée à l'accumulateur AVANCER par décharge MBON. */
+  gainApproche: number;
+  /** Preuve ajoutée au accumulateur du virage VERS l'odeur dominante, par décharge
+   *  MBON — c'est ce qui fait du contact une CONSÉQUENCE de l'odeur : sans guidage,
+   *  l'organisme percute au hasard et les marques consolidées ne sont pas causales
+   *  (mesuré : l'aversif apprenait la nourriture). */
+  gainDir: number;
+  /** Preuve ajoutée à l'accumulateur du virage À L'OPPOSÉ de l'odeur dominante, par
+   *  décharge SER — l'évitement appris réoriente plutôt que figer. */
+  gainEvite: number;
+  /** Amplitude de l'impulsion de modulation à l'instant de l'événement (OA
+   *  appétitif / DA aversif). > dumpNow déclenche le déversement immédiat : la
+   *  consolidation saisit l'instantané des marques — dominées par l'odeur touchée,
+   *  par l'intensité-proximité — au lieu de laisser se réécrire pendant une fenêtre
+   *  des marques de l'autre odeur restée présente (mesuré : la fenêtre continue
+   *  détruit la sélectivité d'odeur). */
+  oaDose: number;
+  daDose: number;
+  /** Gain d'injection de l'odeur dans les glomérules, modulé par l'intensité
+   *  perçue au meilleur secteur. */
+  injectOdeur: number;
+}
+
 export interface OrganismParams {
   brain: BrainParams;
   world: WorldParams;
@@ -347,6 +404,8 @@ export interface OrganismParams {
   tauReward: number;
   /** Graine du placement des pastilles et du prédateur, distincte de celle du cerveau. */
   worldSeed: number;
+  /** Module olfactif greffé — absent = comportement historique inchangé. */
+  voie?: VoieMondeParams;
 }
 
 export const ORGANISME_DEFAUT: OrganismParams = {

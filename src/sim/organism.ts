@@ -16,8 +16,10 @@ import { mulberry32, type RNG } from "../lib/rng";
 import { createBrain, encodeSensation, stepBrain, type Brain } from "./brain";
 import { addDopamine, homeostasis } from "./plasticity";
 import { createMetrics, recordEvent, recordTick, type Metrics } from "./metrics";
-import { createWorld, sense, stepWorld, type WorldEventKind, type WorldState } from "./world";
-import { TAUX_HOMEO, type MotorAction, type OrganismParams } from "./params";
+import { createWorld, sense, stepWorld, SECTEURS_OLF, type WorldEventKind, type WorldState } from "./world";
+import { ACTIONS, TAUX_HOMEO, type MotorAction, type OrganismParams } from "./params";
+import { createVoie, dechargesSer, dechargesSortie, injecterOdeur, stepVoie, type Voie } from "./voie";
+import { actifs, declinerN, genererOdeur, type Odeur } from "./tasks/odors";
 
 export interface DopamineContext {
   reward: number;
@@ -69,6 +71,21 @@ export interface Organism {
   lastAction: MotorAction | null;
   /** Calendrier de dopamine émis — sert de source au témoin yoked. */
   daLog: number[];
+  /** Module olfactif (rang 5) — null si `params.voie` absent ou inactif. */
+  voie: Voie | null;
+  /** L'odeur portée par le canal nourriture (le CS appétitif possible). */
+  odeurFood: Odeur | null;
+  /** L'odeur portée par le canal toxine (le CS aversif possible). */
+  odeurToxin: Odeur | null;
+  /** Impulsion de renforcement appétitif (OA) à émettre — posée par un événement FOOD. */
+  usOa: number;
+  /** Impulsion de renforcement aversif (DA) à émettre — posée par un événement TOXIN. */
+  usDa: number;
+  /** Intensité olfactive dominante par canal au tick courant (0 = rien). */
+  sensF: number;
+  sensT: number;
+  /** Odeur injectée ce tick : 0 = rien, 1 = nourriture dominante, 2 = toxine. */
+  odeurCourante: number;
 }
 
 export function createOrganism(p: OrganismParams, options: OrganismOptions = {}): Organism {
@@ -83,6 +100,21 @@ export function createOrganism(p: OrganismParams, options: OrganismOptions = {})
     }
     brain.lif.silenced = options.lesion;
   }
+  // Le module olfactif, si la configuration le demande. Les deux odeurs du monde sont
+  // tirées d'une graine dédiée — mêmes graines ⇒ mêmes codes, l'arbitraire est partagé.
+  let voie: Voie | null = null;
+  let odeurFood: Odeur | null = null;
+  let odeurToxin: Odeur | null = null;
+  if (p.voie?.actif) {
+    voie = createVoie(p.voie.voie, p.voie.lif, p.voie.plast);
+    const rngOdeurs = mulberry32(p.voie.voie.seed ^ 0x0d0e);
+    odeurFood = genererOdeur(rngOdeurs, p.voie.voie.nGlom, "food");
+    // Toxine = complément disjoint du code nourriture : deux tirages libres
+    // partageraient ~6 glomérules actifs — leurs KC communes se feraient marquer
+    // sous les deux étiquettes et la sortie apprise ne serait pas sélective
+    // (mesuré : SER répondait autant à la nourriture).
+    odeurToxin = declinerN(rngOdeurs, odeurFood, actifs(odeurFood).length, "toxin");
+  }
   return {
     brain,
     world: createWorld(p.world, mulberry32(p.worldSeed)),
@@ -92,6 +124,14 @@ export function createOrganism(p: OrganismParams, options: OrganismOptions = {})
     rBar: 0,
     lastAction: null,
     daLog: [],
+    voie,
+    odeurFood,
+    odeurToxin,
+    usOa: 0,
+    usDa: 0,
+    sensF: 0,
+    sensT: 0,
+    odeurCourante: 0,
   };
 }
 
@@ -104,6 +144,25 @@ export function stepOrganism(org: Organism, rng: RNG): { action: MotorAction | n
   const p = org.params;
   const s = sense(org.world, p.world);
   encodeSensation(org.brain, s);
+  if (org.voie) {
+    // Compétition à l'antenne : seule l'odeur DOMINANTE est injectée — le CS est
+    // l'odeur la plus proche, celle qui causera l'événement (à distance < rayon de
+    // contact, l'intensité vaut ~0,9 : la pastille touchée gagne toujours). Mesuré
+    // sans cette porte : les deux codes restent marqués en permanence dans le pool
+    // d'éligibilité et chaque consolidation crédite les deux — MBON et SER se
+    // potentialisent pour les deux odeurs, la sélectivité meurt.
+    let gF = 0;
+    for (const x of s.food) if (x > gF) gF = x;
+    let gT = 0;
+    for (const x of s.toxin) if (x > gT) gT = x;
+    const g0 = p.voie!.injectOdeur;
+    org.sensF = gF;
+    org.sensT = gT;
+    if (gF > gT) injecterOdeur(org.voie, org.odeurFood!.intensites, g0 * gF);
+    else if (gT > 0) injecterOdeur(org.voie, org.odeurToxin!.intensites, g0 * gT);
+    // L'odeur sous laquelle les écritures d'éligibilité du tick seront étiquetées.
+    org.odeurCourante = gF > gT ? 1 : gT > 0 ? 2 : 0;
+  }
 
   // L'action décidée PERSISTE jusqu'à la décision suivante : on décide « avancer », et on
   // avance jusqu'à changer d'avis. Sans cela, l'organisme n'agirait qu'au tick de la décision
@@ -123,6 +182,45 @@ export function stepOrganism(org: Organism, rng: RNG): { action: MotorAction | n
   };
   const da = org.options.dopamineSource ? org.options.dopamineSource(ctx) : pas.reward - org.rBar;
   org.daLog.push(da);
+
+  if (org.voie) {
+    // Chaque événement du monde renforce SON canal par une IMPULSION unique au
+    // tick du contact — pas une fenêtre continue (la fenêtre laissait les marques
+    // de l'autre odeur se réécrire pendant la consolidation : la sélectivité
+    // d'odeur mourait). FOOD → OA, TOXIN → DA.
+    if (pas.event === "FOOD") org.usOa = p.voie!.oaDose;
+    // TOXIN seul — PAS PREDATOR : son CS est le canal ALARM, pas une odeur. À
+    // chaque coup, l'odeur dominante du moment (souvent la nourriture, dont
+    // l'organisme reste proche) se consolidait sur le canal aversif — mesuré :
+    // le SER apprenait « nourriture → danger », la mauvaise association.
+    if (pas.event === "TOXIN") org.usDa = p.voie!.daDose;
+    // Un événement ne consolide que les marques écrites sous SON odeur
+    // (portée d'odeur dans addModulateurs).
+    const odeurUS = pas.event === "FOOD" ? 1 : pas.event === "TOXIN" ? 2 : 0;
+    stepVoie(org.voie, rng, org.usOa, org.usDa, org.odeurCourante, odeurUS);
+    org.usOa = 0;
+    org.usDa = 0;
+
+    // Les sorties du module PILOTENT la direction, pas seulement la marche : le
+    // contact devient une conséquence de l'odeur — c'est ce qui rend les marques
+    // au contact causales (mesuré : sans guidage, l'aversif apprenait l'odeur
+    // statistiquement dominante, pas la coupable).
+    const mbon = dechargesSortie(org.voie);
+    const ser = dechargesSer(org.voie);
+    if (mbon > 0 || ser > 0) {
+      // Direction de l'odeur dominante : le secteur de plus forte intensité, en
+      // coordonnée latérale — cy > 0 = à gauche du cap.
+      const canal = org.sensF > org.sensT ? s.food : s.toxin;
+      let k = 0;
+      for (let b = 1; b < SECTEURS_OLF; b++) if (canal[b] > canal[k]) k = b;
+      const gauche = k > 0 && k <= SECTEURS_OLF / 2; // secteurs 1..12 = à gauche
+      const iG = ACTIONS.indexOf("GAUCHE");
+      const iD = ACTIONS.indexOf("DROITE");
+      org.brain.acc[ACTIONS.indexOf("AVANCER")] += p.voie!.gainApproche * mbon;
+      org.brain.acc[gauche ? iG : iD] += p.voie!.gainDir * mbon;
+      org.brain.acc[gauche ? iD : iG] += p.voie!.gainEvite * ser;
+    }
+  }
   // Les paramètres EFFECTIFS du cerveau, pas ceux d'origine : `options.lr` a pu les
   // remplacer, et le témoin gelé en dépend entièrement.
   const plast = org.brain.params.plasticity;

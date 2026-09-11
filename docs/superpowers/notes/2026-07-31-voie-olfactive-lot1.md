@@ -224,3 +224,60 @@ sur des canaux de renforcement distincts — et la structure causale est correct
 couper DA supprime SEUL l'appris aversif, couper OA SEUL l'appétitif. C'est la
 première falsification passée de l'architecture de modulation : le projet aurait
 pu échouer ici si « dopamine = récompense » avait été une convention unique.
+
+---
+
+# Rang 5 « réinjection dans le monde » — la voie pilote l'organisme libre (2026-08-01)
+
+Sonde : `src/sim/_voie-monde.probe.test.ts` — l'organisme de l'arène (cortex
+homéostatique inchangé) reçoit la voie olfactive en module optionnel. Nourriture
+→ code fixe, consolidé OA ; toxine → code disjoint (complément du support),
+consolidé DA ; prédateur → canal ALARM seul, jamais d'odeur. MBON → approche et
+virage vers l'odeur dominante ; SER → virage à l'opposé.
+
+## L'attribution causale — le vrai problème du rang
+
+Quatre mécanismes ont été nécessaires, chacun mesuré en route :
+
+1. **Impulsion unique au contact** — une fenêtre US continue laissait les marques
+   de l'autre odeur se réécrire pendant la consolidation.
+2. **Compétition à l'antenne (WTA)** — seule l'odeur dominante est injectée ; sans
+   ça, les deux codes co-existent dans le pool d'éligibilité.
+3. **Guidage directionnel** — sans pilotage par l'odeur, l'organisme percute au
+   hasard et les marques au contact ne sont pas causales.
+4. **Étiquette d'odeur sur l'éligibilité** (`eligOdeur`) — mesure clé : la
+   dominance dans les ~46 derniers ticks avant un contact toxine est ~50/50
+   (l'organisme dirigé vers la nourriture percute les toxines en chemin). Aucun
+   critère temporel ne sépare la cause : chaque écriture d'éligibilité porte
+   l'odeur injectée, remise à zéro au changement, et un événement ne consolide
+   que les marques portant la sienne.
+5. **Trace de stimulus** (`eligTrace`) — la sortie naïve tire trop rarement pour
+   écrire des marques par coïncidence (mesuré : elig ~0,02 uniforme) ; la marque
+   = « cette KC était active sous cette odeur » (pré seul, porté par `fraisMin`),
+   consolidée par le renforcement — le rôle biologique de l'éligibilité.
+
+Écart assumé : la porte `seuilElig` élimine les marques faibles (tir spontané) —
+calibrée, pas dérivée d'une borne publiée.
+
+## Mesures (2 graines × 4 bras, 300 000 t)
+
+| bras | w(SER) toxine | w(SER) nourr. | w(MBON) nourr. | w(MBON) toxine | toxine / gelé |
+|---|---|---|---|---|---|
+| plastique s1 | **1,21** | 0,01 | **3,00** | 0,08 | 166/343 |
+| plastique s2 | **0,51** | 0,02 | **3,00** | 0,01 | 146/518 |
+| lésion OA | 0,5–1,0 | ~0,01 | **naïf** | naïf | réduite |
+| lésion DA | naïf | naïf | **3,00** | 0,0–0,2 | inchangée |
+| gelé (lr=0) | 0,003 | 0,003 | 0,003 | 0,003 | — |
+
+Réponses sondées (décharges / 2000 t, odeur seule) : SER(toxine) 257–308 vs
+SER(nourriture) 77–89 (~3,5×) ; MBON(nourriture) ~370 vs MBON(toxine) ~120 (~3×).
+
+## Ce que ça démontre
+
+La mémoire olfactive écrite dans le harnais se réinjecte dans l'organisme libre
+et **change son régime de rencontres** : ~2–3× moins de toxines consommées qu'à
+module gelé, nourriture maintenue ou accrue — par un mécanisme interne mesuré
+(poids sélectifs par population de KC), sous contrôle de lésions dissociées et
+de gelé, bit-identique à graine égale. L'historique des portes 1–4 est préservé :
+les nouvelles capacités sont des options éteintes par défaut, les flux RNG sont
+séparés, les trajectoires des portes précédentes n'ont pas bougé.

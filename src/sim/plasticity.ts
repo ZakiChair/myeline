@@ -55,6 +55,23 @@ export interface PlasticityState {
    * lésables SÉPARÉMENT — une lésion coupe un canal sans toucher l'autre.
    */
   plastChannel: Uint8Array | null;
+  /**
+   * [q] source de la q-ème arête de `plastSet` — sert à la porte de fraîcheur
+   * `fraisMin` : une arête ne consolide que si sa source a déchargé récemment.
+   * Rang 5 : l'éligibilité intègre toute l'histoire depuis le dernier événement du
+   * canal — les marques de l'autre odeur y survivent et se font consolider au
+   * contact (mesuré : l'aversif apprenait la nourriture). La porte borne le crédit
+   * aux prés frais — dominés par la pastille touchée.
+   */
+  plastSrc: Int32Array | null;
+  /**
+   * [e] odeur sous laquelle l'éligibilité de l'arête a été écrite en dernier :
+   * 0 = rien, 1 = nourriture, 2 = toxine. Rang 5 : dans le monde dense, les deux
+   *  odeurs partagent la dominance presque moitié-moitié au contact — le temps
+   *  seul ne sépare pas l'odeur causale. Un événement ne consolide que les
+   *  marques écrites sous SON odeur.
+   */
+  eligOdeur: Int8Array | null;
   /** Accumulateur du canal appétitif (OA). */
   daAccum: number;
   /** Accumulateur du canal aversif (DA). */
@@ -68,7 +85,9 @@ export function createPlasticity(
   p: PlasticityParams,
   plastSet: Int32Array | null = null,
   plastChannel: Uint8Array | null = null,
+  plastSrc: Int32Array | null = null,
 ): PlasticityState {
+  const eligOdeur = plastSet !== null ? new Int8Array(topo.e) : null;
   const taille = 4 * p.tauElig + 1;
   const lut = new Float32Array(taille);
   for (let k = 0; k < taille; k++) lut[k] = k >= 4 * p.tauElig ? 0 : Math.exp(-k / p.tauElig);
@@ -87,6 +106,8 @@ export function createPlasticity(
     plastFlag,
     plastSet,
     plastChannel,
+    plastSrc,
+    eligOdeur,
     daAccum: 0,
     daAccum2: 0,
     lastDump: 0,
@@ -114,9 +135,11 @@ export function accumulateEligibility(
   lif: LifState,
   ps: PlasticityState,
   p: PlasticityParams,
+  odeurCourante = 0,
 ): void {
   const t = lif.t;
   const nb = lif.spikeCount;
+  const tag = ps.eligOdeur;
 
   // (a) Dépression : la source vient de décharger, on pénalise ses cibles déjà actives.
   for (let k = 0; k < nb; k++) {
@@ -128,7 +151,11 @@ export function accumulateEligibility(
       const post = ps.postTrace[topo.outTarget[e]];
       if (post === 0) continue;
       toucher(ps, e, t);
+      // Changement d'odeur : les marques d'une autre odeur ne valent pas pour
+      // l'événement à venir — l'éligibilité est pure-odeur.
+      if (tag !== null && tag[e] !== odeurCourante) ps.elig[e] = 0;
       ps.elig[e] -= p.aMinus * post;
+      if (tag !== null) tag[e] = odeurCourante;
     }
   }
 
@@ -144,7 +171,30 @@ export function accumulateEligibility(
       const pre = ps.preTrace[src];
       if (pre === 0) continue;
       toucher(ps, e, t);
+      if (tag !== null && tag[e] !== odeurCourante) ps.elig[e] = 0;
       ps.elig[e] += p.aPlus * pre;
+      if (tag !== null) tag[e] = odeurCourante;
+    }
+  }
+
+  // (b') Trace de stimulus (mode monde) : chaque arête plastique dont la source a
+  // été active récemment accumule une marque étiquetée par l'odeur courante — la
+  // coïncidence avec la sortie n'est pas requise : la sortie naïve tire trop
+  // rarement pour densifier les marques (mesuré : elig ~0,02 sans contraste).
+  if (p.eligTrace && tag !== null && odeurCourante > 0 && ps.plastSrc !== null) {
+    const set = ps.plastSet!;
+    const srcs = ps.plastSrc;
+    for (let q = 0; q < set.length; q++) {
+      const tr = ps.preTrace[srcs[q]];
+      // Porte d'écriture : la trace doit refléter une source VRAIMENT active, pas
+      // un tir spontané — sinon le fond accumule des marques étiquetées qui
+      // franchissent le plancher de consolidation (mesuré : w(MBON) toxine ≈ 1,2).
+      if (tr <= 0 || tr < p.fraisMin) continue;
+      const e = set[q];
+      toucher(ps, e, t);
+      if (tag[e] !== odeurCourante) ps.elig[e] = 0;
+      ps.elig[e] += p.aPlus * tr;
+      tag[e] = odeurCourante;
     }
   }
 
@@ -181,6 +231,7 @@ export function addModulateurs(
   oa: number,
   da: number,
   observer?: (e: number, elig: number) => void,
+  odeurUS = 0,
 ): boolean {
   ps.daAccum += oa;
   ps.daAccum2 += da;
@@ -203,12 +254,12 @@ export function addModulateurs(
   // Avec deux canaux, la règle s'applique par canal : un événement aversif ne consomme
   // pas les marques des arêtes appétitives (elles peuvent encore être consolidées plus
   // tard par un événement appétitif dans la fenêtre).
-  const appliquer = (e: number): void => {
+  const appliquer = (e: number, credit?: number): void => {
     const canal = ps.plastChannel === null ? 0 : ps.plastChannel[e];
     const d = canal === 2 ? d2 : d1;
-    const el = toucher(ps, e, t);
+    const el = credit ?? toucher(ps, e, t);
     if (observer) observer(e, el);
-    if (el === 0) return;
+    if (Math.abs(el) < p.seuilElig || el === 0) return;
     let nw = topo.w[e] + p.lr * d * el;
     if (nw < 0) nw = 0;
     else if (nw > p.wMax) nw = p.wMax;
@@ -222,7 +273,20 @@ export function addModulateurs(
   // n'accumulent jamais d'éligibilité, donc les sauter ne perd rien.
   if (ps.plastSet !== null) {
     const set = ps.plastSet;
-    for (let q = 0; q < set.length; q++) appliquer(set[q]);
+    const srcs = ps.plastSrc;
+    for (let q = 0; q < set.length; q++) {
+      const e = set[q];
+      // Porte de fraîcheur : seules les arêtes dont la source a déchargé dans la
+      // fenêtre de trace pré (~tauPre) consolident — le crédit va à l'odeur
+      // causale, pas à l'intégrale d'histoire.
+      if (srcs !== null && p.fraisMin > 0 && ps.preTrace[srcs[q]] < p.fraisMin) continue;
+      // Porte d'odeur : un événement ne consolide que les marques écrites sous SON
+      // odeur — dans le monde dense les deux odeurs partagent la dominance au
+      // contact, le temps seul ne sépare pas la cause (mesuré : sans ça, le canal
+      // aversif apprenait la nourriture).
+      if (odeurUS > 0 && ps.eligOdeur !== null && ps.eligOdeur[e] !== odeurUS) continue;
+      appliquer(e);
+    }
     return true;
   }
 

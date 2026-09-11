@@ -137,6 +137,12 @@ export const PLASTICITE_SECONDES = {
   aMinus: 0.0105,
   lr: 0.05,
   dumpNow: 0.6,
+  /** Porte de fraîcheur à la consolidation — 0 = inactif (rang 5 la règle). */
+  fraisMin: 0,
+  /** Plancher d'éligibilité à la consolidation — 0 = inactif (rang 5 la règle). */
+  seuilElig: 0,
+  /** Éligibilité par trace de stimulus (pré seul) — rang 5, module monde. */
+  eligTrace: false,
   homeoRate: 0.15,
   homeoClamp: 0.05,
   wMax: 3.0,
@@ -158,6 +164,9 @@ export function resoudrePlasticite(
       aMinus: sec.aMinus,
       lr: sec.lr,
       dumpNow: sec.dumpNow,
+      fraisMin: sec.fraisMin,
+      seuilElig: sec.seuilElig,
+      eligTrace: sec.eligTrace,
       homeoRate: sec.homeoRate,
       homeoClamp: sec.homeoClamp,
       wMax: sec.wMax,

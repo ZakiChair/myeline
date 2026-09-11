@@ -117,6 +117,7 @@ export function buildVoie(p: VoieParams): {
   topo: Topology;
   bornes: BornesVoie;
   plastSet: Int32Array;
+  plastSrc: Int32Array;
   plastChannel: Uint8Array;
   plastParCanal: { oa: Int32Array; da: Int32Array };
 } {
@@ -246,6 +247,9 @@ export function buildVoie(p: VoieParams): {
   // (canal 2 = DA, aversif). Chacune ne consolide que sous son modulateur.
   const plastOA = new Int32Array(b.kc.count * nSortieParKC);
   const plastDA = new Int32Array(b.kc.count * p.nSer);
+  // Source de chaque arête plastique, alignée sur plastSet — la porte de fraîcheur
+  // (fraisMin, rang 5) borne la consolidation aux prés récents.
+  const plastSrc = new Int32Array(plastOA.length + plastDA.length);
   let qOA = 0;
   let qDA = 0;
   for (let k = 0; k < b.kc.count; k++) {
@@ -256,11 +260,13 @@ export function buildVoie(p: VoieParams): {
         nSortieParKC === p.nMBON
           ? b.mbon.start + q
           : b.mbon.start + randInt(rng, 0, p.nMBON - 1);
-      plastOA[qOA++] = cursor[i]; // l'écriture qui suit est l'arête plastique
+      plastOA[qOA] = cursor[i]; // l'écriture qui suit est l'arête plastique
+      plastSrc[qOA++] = i;
       ecrire(i, cible, p.w0, randInt(rng, 1, p.delayMax));
     }
     for (let q = 0; q < p.nSer; q++) {
-      plastDA[qDA++] = cursor[i];
+      plastDA[qDA] = cursor[i];
+      plastSrc[plastOA.length + qDA++] = i;
       ecrire(i, b.ser.start + q, p.w0, randInt(rngSer, 1, p.delayMax));
     }
   }
@@ -322,6 +328,7 @@ export function buildVoie(p: VoieParams): {
     },
     bornes: b,
     plastSet: plast,
+    plastSrc,
     plastChannel,
     plastParCanal: { oa: plastOA, da: plastDA },
   };
@@ -332,11 +339,11 @@ export function createVoie(
   lifParams: LifParams,
   plastParams: PlasticityParams,
 ): Voie {
-  const { topo, bornes, plastSet, plastChannel, plastParCanal } = buildVoie(p);
+  const { topo, bornes, plastSet, plastSrc, plastChannel, plastParCanal } = buildVoie(p);
   return {
     topo,
     lif: createLif(topo, lifParams),
-    plast: createPlasticity(topo, plastParams, plastSet, plastChannel),
+    plast: createPlasticity(topo, plastParams, plastSet, plastChannel, plastSrc),
     params: p,
     lifParams,
     plastParams,
@@ -356,9 +363,19 @@ export function createVoie(
  * sans toucher ni l'autre canal ni le réflexe inné. AUCUNE homéostasie : la
  * stabilité est structurelle (§5.5).
  */
-export function stepVoie(v: Voie, rng: RNG, oa: number, da = 0): number {
+export function stepVoie(
+  v: Voie,
+  rng: RNG,
+  oa: number,
+  da = 0,
+  odeurCourante = 0,
+  odeurUS = 0,
+): number {
   stepLif(v.topo, v.lif, v.lifParams, rng, v.rngBruitSer, v.bornes.noci.start);
-  accumulateEligibility(v.topo, v.lif, v.plast, v.plastParams);
+  // Chaque écriture d'éligibilité est étiquetée par l'odeur injectée ce tick —
+  // dans le monde dense, la dominance au contact est partagée et le temps seul
+  // ne sépare pas l'odeur causale de l'événement.
+  accumulateEligibility(v.topo, v.lif, v.plast, v.plastParams, odeurCourante);
   addModulateurs(
     v.topo,
     v.lif,
@@ -366,6 +383,8 @@ export function stepVoie(v: Voie, rng: RNG, oa: number, da = 0): number {
     v.plastParams,
     v.lesions.oa ? 0 : oa,
     v.lesions.da ? 0 : da,
+    undefined,
+    odeurUS,
   );
   return v.lif.spikeCount;
 }
