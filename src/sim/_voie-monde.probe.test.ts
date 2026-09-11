@@ -84,8 +84,13 @@ interface Mesure {
 
 /** Réponse de la voie à une odeur présentée seule, hors monde : compte sur 2000 t,
  *  plus les KC ayant déchargé sous cette odeur — pour grouper les poids par
- *  appartenance. */
-function sonderVoie(org: Organism, rng: ReturnType<typeof mulberry32>) {
+ *  appartenance. `codes` = les deux codes présentés (explicites : après inversion,
+ *  `org.odeurFood` ne porte plus le code « nourriture » d'origine). */
+function sonderVoie(
+  org: Organism,
+  rng: ReturnType<typeof mulberry32>,
+  codes?: { a: NonNullable<Organism["odeurFood"]>; b: NonNullable<Organism["odeurToxin"]> },
+) {
   const v = org.voie!;
   const sondage = (odeur: typeof org.odeurFood): Sondage => {
     for (let t = 0; t < 500; t++) stepVoie(v, rng, 0, 0); // laisser décroître les traces
@@ -108,8 +113,8 @@ function sonderVoie(org: Organism, rng: ReturnType<typeof mulberry32>) {
     for (const [i, c] of kcComptes) if (c >= MIN_DECHARGES_REPONDEUR) kcVus.add(i);
     return { m, s, kcVus };
   };
-  const food = sondage(org.odeurFood);
-  const toxin = sondage(org.odeurToxin);
+  const food = sondage(codes ? codes.a : org.odeurFood);
+  const toxin = sondage(codes ? codes.b : org.odeurToxin);
   // Poids des arêtes KC → SER et KC → MBON, groupés par l'odeur qui fait décharger
   // la KC source : mesure directe de la sélectivité de la consolidation.
   const topo = v.topo;
@@ -208,5 +213,59 @@ describe("voie dans le monde — rang 5 (porte)", () => {
     expect(b.ateFood).toBe(a.ateFood);
     expect(b.ateToxin).toBe(a.ateToxin);
     expect(b.vies).toBe(a.vies);
+  }, 60 * 60_000);
+
+  it("inversion : échanger les codes en cours de vie ré-apprend la carte", () => {
+    for (const seed of [1, 2]) {
+      const org = createOrganism(paramsAvecVoie(seed, 0.05));
+      const codeA = org.odeurFood!;
+      const codeB = org.odeurToxin!;
+      const rng = mulberry32(seed * 7919);
+
+      // Phase 1 : A = nourriture, B = toxine — apprentissage normal.
+      runOrganism(org, TICKS, rng);
+      const avant = sonderVoie(org, rng, { a: codeA, b: codeB });
+      expect(avant.poidsSer.t).toBeGreaterThan(4 * avant.poidsSer.f);
+      expect(avant.poidsMbon.f).toBeGreaterThan(4 * avant.poidsMbon.t);
+
+      // INVERSION : le canal nourriture porte désormais le code B, le canal
+      // toxine le code A. La carte synaptique doit suivre la contingence, pas
+      // l'odeur : SER doit apprendre A (ex-nourriture), MBON doit apprendre B
+      // (ex-toxine).
+      org.odeurFood = codeB;
+      org.odeurToxin = codeA;
+      const f0 = org.metrics.ateFood;
+      const t0 = org.metrics.ateToxin;
+      runOrganism(org, TICKS, rng);
+      const apres = sonderVoie(org, rng, { a: codeA, b: codeB });
+      const food2 = org.metrics.ateFood - f0;
+      const toxin2 = org.metrics.ateToxin - t0;
+      console.log(
+        `seed ${seed} inversion : w(SER|A) ${avant.poidsSer.f.toFixed(3)} → ${apres.poidsSer.f.toFixed(3)} | ` +
+          `w(MBON|B) ${avant.poidsMbon.t.toFixed(3)} → ${apres.poidsMbon.t.toFixed(3)} | ` +
+          `phase2 food=${food2} toxin=${toxin2}`,
+      );
+
+      // Les rencontres continuent après l'inversion.
+      expect(food2).toBeGreaterThan(50);
+      expect(toxin2).toBeGreaterThan(10);
+
+      // Ré-apprentissage : les poids du code qui a CHANGÉ de valence croissent
+      // sur l'autre canal — A (ex-nourriture) apprend l'aversif, B (ex-toxine)
+      // apprend l'appétitif.
+      expect(apres.poidsSer.f).toBeGreaterThan(0.1);
+      expect(apres.poidsSer.f).toBeGreaterThan(8 * avant.poidsSer.f);
+      expect(apres.poidsMbon.t).toBeGreaterThan(0.15);
+      expect(apres.poidsMbon.t).toBeGreaterThan(8 * avant.poidsMbon.t);
+
+      // Limite honnête du modèle : l'ancienne mémoire PERSISTE — rien ne
+      // désapprend SER(B) ni MBON(A) : post-inversion leurs marques sont
+      // étiquetées sous l'autre odeur et jamais consolidées par leur canal
+      // (pas d'extinction). Documenté : la carte se réécrit par ajout, pas par
+      // effacement. Marge 0,9 : les ensembles de répondeurs mesurés peuvent
+      // bouger d'un epsilon entre sondages.
+      expect(apres.poidsSer.t).toBeGreaterThan(avant.poidsSer.t * 0.9);
+      expect(apres.poidsMbon.f).toBeGreaterThan(avant.poidsMbon.f * 0.9);
+    }
   }, 60 * 60_000);
 });

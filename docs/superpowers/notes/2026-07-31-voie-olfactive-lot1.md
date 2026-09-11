@@ -281,3 +281,22 @@ module gelé, nourriture maintenue ou accrue — par un mécanisme interne mesur
 de gelé, bit-identique à graine égale. L'historique des portes 1–4 est préservé :
 les nouvelles capacités sont des options éteintes par défaut, les flux RNG sont
 séparés, les trajectoires des portes précédentes n'ont pas bougé.
+
+### Inversion des contingences (même sonde, test dédié)
+
+Phase 1 : A = nourriture, B = toxine (300 000 t) → apprentissage normal.
+Puis échange des codes : le canal nourriture porte B, le canal toxine porte A,
+pour 300 000 t de plus.
+
+| graine | w(SER←A) avant → après | w(MBON←B) avant → après |
+|---|---|---|
+| 1 | 0,010 → **1,615** (×161) | 0,078 → **3,00** (×38) |
+| 2 | 0,017 → **1,488** (×87) | 0,011 → **3,00** (×270) |
+
+La carte synaptique suit la contingence du monde, pas l'odeur : les KC de
+l'ex-nourriture se potentialisent sur SER, celles de l'ex-toxine sur MBON.
+
+**Limite honnête mesurée** : l'ancienne mémoire persiste — rien ne désapprend
+SER(B) ni MBON(A) (leurs marques post-inversion sont étiquetées sous l'autre
+odeur et jamais consolidées par leur canal — pas d'extinction). La carte se
+réécrit par ajout, pas par effacement.
