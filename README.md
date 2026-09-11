@@ -57,9 +57,14 @@ Branche de travail : refonte « voie olfactive » (spec `2026-07-30-myeline-abei
   CS− → 38 % (monte par généralisation puis reflue), McNemar p = 9,5·10⁻⁷,
   contrebalancement symétrique, ~38 % de non-discriminateurs (publié : 31,5 %),
   gelé plat.
+- **Fait** : rang 3 « SER aversif » — **la porte à trois volets est passée** (sonde
+  `voie-ser.probe.test.ts`) : SER apparié monte (16/16), non apparié plat (0/16),
+  Fisher p = 1,66·10⁻⁹, PER intact sur le même cerveau, et **double dissociation
+  des lésions** : canal OA coupé → PER mort / SER vivant ; canal DA coupé →
+  SER mort / PER vivant. Réflexes innés intacts sous toute lésion.
   Mesures et limites : `docs/superpowers/notes/2026-07-31-voie-olfactive-lot1.md`.
-- **À venir** : SER aversif (rang 3 — la porte à trois volets : lésions
-  dopamine/octopamine dissociées), puis échelle complète.
+- **À venir** : échelle complète (n publié), puis réinjection de la voie dans le
+  monde — la boucle se referme sur l'organisme libre.
 
 ⚠️ Le mot « abeille » n'apparaît ni dans le code ni dans l'interface avant que le lot 3
 soit passé (règle de nommage décidée le 2026-07-30).

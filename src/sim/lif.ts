@@ -62,8 +62,23 @@ export function createLif(topo: Topology, p: LifParams): LifState {
   };
 }
 
-/** Un tick d'activité. Renvoie le nombre de décharges. Mute `st` et lit `topo`. */
-export function stepLif(topo: Topology, st: LifState, p: LifParams, rng: RNG): number {
+/**
+ * Un tick d'activité. Renvoie le nombre de décharges. Mute `st` et lit `topo`.
+ *
+ * `rng2` / `nBruit` : les neurones d'indice ≥ `nBruit` tirent leur bruit de `rng2`
+ * (défaut : `rng` lui-même). Rang 3 — la voie a gagné des neurones (NOCI, SER) ;
+ * sans ce second flux, chaque tick consommerait 9 tirages de plus sur le flux
+ * partagé et les trajectoires historiques divergeraient dès le tick 2. Le flux
+ * principal avance exactement comme avant : bit-identique aux portes passées.
+ */
+export function stepLif(
+  topo: Topology,
+  st: LifState,
+  p: LifParams,
+  rng: RNG,
+  rng2: RNG = rng,
+  nBruit = st.n,
+): number {
   const n = st.n;
   const d = st.ringDepth;
   const base = (st.t % d) * n;
@@ -92,9 +107,10 @@ export function stepLif(topo: Topology, st: LifState, p: LifParams, rng: RNG): n
 
   // 2-3) Intégration et seuil. Le bruit est tiré pour TOUS les neurones, y compris masqués
   // et réfractaires : sinon le flux du RNG dépendrait de l'état, et une lésion décalerait
-  // tout le bruit du réseau, rendant les comparaisons du lot 3 impossibles.
+  // tout le bruit du réseau, rendant les comparaisons du lot 3 impossibles. Le tirage est
+  // réparti sur deux flux à la frontière nBruit (rang 3) — jamais sur l'état.
   for (let i = 0; i < n; i++) {
-    const bruit = p.noise > 0 ? p.noise * gaussTable(rng) : 0;
+    const bruit = p.noise > 0 ? p.noise * gaussTable(i < nBruit ? rng : rng2) : 0;
     if (sil !== null && sil[i] === 1) {
       st.v[i] = p.vReset;
       continue;

@@ -49,7 +49,16 @@ export interface PlasticityState {
    * quand elle existe, au lieu de tout le CSR sortant.
    */
   plastSet: Int32Array | null;
+  /**
+   * [e] canal de modulation qui consolide l'arête : 0 ou absent = canal appétitif
+   * (octopamine — d1), 2 = canal aversif (dopamine — d2). Rang 3 : les deux voies sont
+   * lésables SÉPARÉMENT — une lésion coupe un canal sans toucher l'autre.
+   */
+  plastChannel: Uint8Array | null;
+  /** Accumulateur du canal appétitif (OA). */
   daAccum: number;
+  /** Accumulateur du canal aversif (DA). */
+  daAccum2: number;
   lastDump: number;
   lastHomeo: number;
 }
@@ -58,6 +67,7 @@ export function createPlasticity(
   topo: Topology,
   p: PlasticityParams,
   plastSet: Int32Array | null = null,
+  plastChannel: Uint8Array | null = null,
 ): PlasticityState {
   const taille = 4 * p.tauElig + 1;
   const lut = new Float32Array(taille);
@@ -76,7 +86,9 @@ export function createPlasticity(
     spikeAtLastHomeo: new Int32Array(topo.n),
     plastFlag,
     plastSet,
+    plastChannel,
     daAccum: 0,
+    daAccum2: 0,
     lastDump: 0,
     lastHomeo: 0,
   };
@@ -153,9 +165,80 @@ export function accumulateEligibility(
 }
 
 /**
- * Ajoute de la dopamine et déverse si la cadence ou le seuil l'impose. Renvoie true si un
- * déversement a eu lieu. `observer` sert aux tests : il reçoit chaque arête touchée et son
- * éligibilité à jour, avant application.
+ * Ajoute un modulateur par canal — `oa` = canal appétitif (octopamine), `da` = canal
+ * aversif (dopamine) — et déverse si la cadence ou le seuil l'impose. Chaque arête ne
+ * consolide que sous le canal qui le gouverne (`plastChannel`) ; l'éligibilité d'une
+ * arête n'est consommée que par une vraie consolidation SUR SON canal.
+ *
+ * `addDopamine` (ci-dessous) garde la signature historique : canal appétitif seul,
+ * comportement du lot 0 inchangé.
+ */
+export function addModulateurs(
+  topo: Topology,
+  lif: LifState,
+  ps: PlasticityState,
+  p: PlasticityParams,
+  oa: number,
+  da: number,
+  observer?: (e: number, elig: number) => void,
+): boolean {
+  ps.daAccum += oa;
+  ps.daAccum2 += da;
+  const echu = lif.t - ps.lastDump >= p.dumpEvery;
+  if (!echu && Math.abs(ps.daAccum) < p.dumpNow && Math.abs(ps.daAccum2) < p.dumpNow) {
+    return false;
+  }
+
+  const t = lif.t;
+  const d1 = ps.daAccum;
+  const d2 = ps.daAccum2;
+  ps.daAccum = 0;
+  ps.daAccum2 = 0;
+  ps.lastDump = t;
+  // Une marque d'éligibilité n'est consommée que par une VRAIE consolidation (d ≠ 0)
+  // SUR LE CANAL DE L'ARÊTE : un déversement à modulateur nul ne doit pas l'effacer —
+  // sinon la fenêtre de crédit effective vaut dumpEvery, pas tauElig. Mesuré au lot 1
+  // de la refonte : avec la remise à zéro inconditionnelle, l'éligibilité d'un CS
+  // mourait tous les 250 ticks et l'ISI de 3 000 n'était jamais franchi par la marque.
+  // Avec deux canaux, la règle s'applique par canal : un événement aversif ne consomme
+  // pas les marques des arêtes appétitives (elles peuvent encore être consolidées plus
+  // tard par un événement appétitif dans la fenêtre).
+  const appliquer = (e: number): void => {
+    const canal = ps.plastChannel === null ? 0 : ps.plastChannel[e];
+    const d = canal === 2 ? d2 : d1;
+    const el = toucher(ps, e, t);
+    if (observer) observer(e, el);
+    if (el === 0) return;
+    let nw = topo.w[e] + p.lr * d * el;
+    if (nw < 0) nw = 0;
+    else if (nw > p.wMax) nw = p.wMax;
+    topo.w[e] = nw;
+    if (d !== 0) ps.elig[e] = 0;
+  };
+
+  // Plasticité confinée : on ne balaie que l'ensemble déclaré (lot 1 — une seule couche
+  // apprend). Hors confinement, balayage par source : on retrouve le signe sans tableau
+  // `edgeSource` supplémentaire (12 Mo économisés à n = 50 000), et les arêtes inhibitrices
+  // n'accumulent jamais d'éligibilité, donc les sauter ne perd rien.
+  if (ps.plastSet !== null) {
+    const set = ps.plastSet;
+    for (let q = 0; q < set.length; q++) appliquer(set[q]);
+    return true;
+  }
+
+  for (let i = 0; i < topo.n; i++) {
+    if (topo.sign[i] !== 1) continue;
+    const fin = topo.outOffsets[i + 1];
+    for (let e = topo.outOffsets[i]; e < fin; e++) appliquer(e);
+  }
+  return true;
+}
+
+/**
+ * Ajoute de la dopamine (canal appétitif, le modulateur historique du projet) et
+ * déverse si la cadence ou le seuil l'impose. Renvoie true si un déversement a eu lieu.
+ * `observer` sert aux tests : il reçoit chaque arête touchée et son éligibilité à jour,
+ * avant application.
  */
 export function addDopamine(
   topo: Topology,
@@ -165,58 +248,7 @@ export function addDopamine(
   da: number,
   observer?: (e: number, elig: number) => void,
 ): boolean {
-  ps.daAccum += da;
-  const echu = lif.t - ps.lastDump >= p.dumpEvery;
-  if (!echu && Math.abs(ps.daAccum) < p.dumpNow) return false;
-
-  const t = lif.t;
-  const d = ps.daAccum;
-  ps.daAccum = 0;
-  ps.lastDump = t;
-  // Une marque d'éligibilité n'est consommée que par une VRAIE consolidation (d ≠ 0) :
-  // un déversement à dopamine nulle ne doit pas l'effacer — sinon la fenêtre de crédit
-  // effective vaut dumpEvery, pas tauElig. Mesuré au lot 1 de la refonte : avec la remise
-  // à zéro inconditionnelle, l'éligibilité d'un CS mourait tous les 250 ticks et l'ISI de
-  // 3 000 n'était jamais franchi par la marque, seulement par la trace directe.
-  const consomme = d !== 0;
-
-  const gain = p.lr * d;
-
-  // Plasticité confinée : on ne balaie que l'ensemble déclaré (lot 1 — une seule couche
-  // apprend). Hors confinement, balayage par source : on retrouve le signe sans tableau
-  // `edgeSource` supplémentaire (12 Mo économisés à n = 50 000), et les arêtes inhibitrices
-  // n'accumulent jamais d'éligibilité, donc les sauter ne perd rien.
-  if (ps.plastSet !== null) {
-    const set = ps.plastSet;
-    for (let q = 0; q < set.length; q++) {
-      const e = set[q];
-      const el = toucher(ps, e, t);
-      if (observer) observer(e, el);
-      if (el === 0) continue;
-      let nw = topo.w[e] + gain * el;
-      if (nw < 0) nw = 0;
-      else if (nw > p.wMax) nw = p.wMax;
-      topo.w[e] = nw;
-      if (consomme) ps.elig[e] = 0;
-    }
-    return true;
-  }
-
-  for (let i = 0; i < topo.n; i++) {
-    if (topo.sign[i] !== 1) continue;
-    const fin = topo.outOffsets[i + 1];
-    for (let e = topo.outOffsets[i]; e < fin; e++) {
-      const el = toucher(ps, e, t);
-      if (observer) observer(e, el);
-      if (el === 0) continue;
-      let nw = topo.w[e] + gain * el;
-      if (nw < 0) nw = 0;
-      else if (nw > p.wMax) nw = p.wMax;
-      topo.w[e] = nw;
-      if (consomme) ps.elig[e] = 0;
-    }
-  }
-  return true;
+  return addModulateurs(topo, lif, ps, p, da, 0, observer);
 }
 
 /**

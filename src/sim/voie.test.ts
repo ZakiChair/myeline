@@ -43,12 +43,18 @@ describe("topologie de la voie", () => {
     }
   });
 
-  it("confine la plasticité aux arêtes KC → MBON", () => {
-    const { topo, bornes, plastSet } = buildVoie(cfg());
+  it("confine la plasticité aux arêtes KC → sorties (MBON et SER)", () => {
+    const { topo, bornes, plastSet, plastChannel } = buildVoie(cfg());
     for (const e of plastSet) {
       const cible = topo.outTarget[e];
-      expect(cible).toBeGreaterThanOrEqual(bornes.mbon.start);
-      expect(cible).toBeLessThan(bornes.mbon.start + bornes.mbon.count);
+      const dansMbon =
+        cible >= bornes.mbon.start && cible < bornes.mbon.start + bornes.mbon.count;
+      const dansSer =
+        cible >= bornes.ser.start && cible < bornes.ser.start + bornes.ser.count;
+      expect(dansMbon || dansSer).toBe(true);
+      // Chaque couche de sortie a son canal : MBON = appétitif (OA, canal 0 par
+      // défaut), SER = aversif (DA, canal 2).
+      expect(plastChannel[e]).toBe(dansSer ? 2 : 0);
     }
   });
 

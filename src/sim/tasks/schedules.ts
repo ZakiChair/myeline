@@ -48,9 +48,9 @@ export function essaiApparie(env: Enveloppe, odeur: Odeur, iti: number): EssaiPl
   const fin = Math.max(csFin, usFin) + env.apres;
   return {
     cs: { debut: csDebut, fin: csFin, odeur },
-    us: { debut: usDebut, fin: usFin },
+    us: { debut: usDebut, fin: usFin, canal: "oa" },
     // Noté pendant le CS, AVANT l'arrivée de l'US — la réponse conditionnée.
-    notation: { debut: csDebut, fin: usDebut },
+    notation: { debut: csDebut, fin: usDebut, sortie: "mbon" },
     duree: fin + iti,
   };
 }
@@ -62,7 +62,7 @@ export function essaiCsSeul(env: Enveloppe, odeur: Odeur, iti: number): EssaiPla
   return {
     cs: { debut: csDebut, fin: csFin, odeur },
     us: null,
-    notation: { debut: csDebut, fin: csDebut + env.isi },
+    notation: { debut: csDebut, fin: csDebut + env.isi, sortie: "mbon" },
     duree: csFin + env.apres + iti,
   };
 }
@@ -73,7 +73,7 @@ export function essaiUsSeul(env: Enveloppe, iti: number): EssaiPlan {
   const usFin = usDebut + env.usDuree;
   return {
     cs: null,
-    us: { debut: usDebut, fin: usFin },
+    us: { debut: usDebut, fin: usFin, canal: "oa" },
     notation: null,
     duree: usFin + env.apres + iti,
   };
@@ -87,9 +87,65 @@ export function essaiInverse(env: Enveloppe, odeur: Odeur, iti: number): EssaiPl
   const csFin = csDebut + env.csDuree;
   return {
     cs: { debut: csDebut, fin: csFin, odeur },
-    us: { debut: usDebut, fin: usFin },
-    notation: { debut: csDebut, fin: csDebut + env.isi },
+    us: { debut: usDebut, fin: usFin, canal: "oa" },
+    notation: { debut: csDebut, fin: csDebut + env.isi, sortie: "mbon" },
     duree: csFin + env.apres + iti,
+  };
+}
+
+// ─── Rang 3 : l'enveloppe SER (aversive) ──────────────────────────────────────────
+// Publié (Vergoz et al. 2007) : CS odeur 5 s, US choc 2 s démarrant à l'ISI 3 s —
+// l'US finit EXACTEMENT à l'extinction du CS. Notation pendant les 2 s du choc.
+export const ENVELOPPE_SER: Enveloppe = {
+  miseEnPlace: 2_000,
+  csDuree: 5_000,
+  isi: 3_000,
+  usDuree: 2_000,
+  apres: 2_000,
+};
+
+/**
+ * Essai SER apparié : CS 5 s, choc sur les 2 dernières secondes du CS. ÉCART à la
+ * notation publiée : chez l'animal on note pendant le choc — la lecture est un
+ * événement binaire. Ici la lecture est un taux, et le réflexe inné SATURE la
+ * fenêtre (mesuré : 500/2000 = plafond du réfractaire, le conditionné est invisible
+ * dessous). On note donc l'anticipation [CS, US) — même contenu fonctionnel que la
+ * notation PER : la réponse précède le renforcement.
+ */
+export function essaiSerPaire(env: Enveloppe, odeur: Odeur, iti: number): EssaiPlan {
+  const csDebut = env.miseEnPlace;
+  const csFin = csDebut + env.csDuree;
+  const usDebut = csDebut + env.isi;
+  const usFin = usDebut + env.usDuree; // == csFin : le choc finit avec l'odeur
+  return {
+    cs: { debut: csDebut, fin: csFin, odeur },
+    us: { debut: usDebut, fin: usFin, canal: "da" },
+    notation: { debut: csDebut, fin: usDebut, sortie: "ser" },
+    duree: csFin + env.apres + iti,
+  };
+}
+
+/** CS seul lu sur la sortie SER — témoin non apparié et sonde de généralisation. */
+export function essaiSerSeul(env: Enveloppe, odeur: Odeur, iti: number): EssaiPlan {
+  const csDebut = env.miseEnPlace;
+  const csFin = csDebut + env.csDuree;
+  return {
+    cs: { debut: csDebut, fin: csFin, odeur },
+    us: null,
+    notation: { debut: csDebut, fin: csDebut + env.isi, sortie: "ser" },
+    duree: csFin + env.apres + iti,
+  };
+}
+
+/** Choc seul (l'autre élément du témoin non apparié SER) — rien à noter. */
+export function essaiChocSeul(env: Enveloppe, iti: number): EssaiPlan {
+  const usDebut = env.miseEnPlace;
+  const usFin = usDebut + env.usDuree;
+  return {
+    cs: null,
+    us: { debut: usDebut, fin: usFin, canal: "da" },
+    notation: null,
+    duree: usFin + env.apres + iti,
   };
 }
 

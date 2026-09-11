@@ -24,7 +24,7 @@ import { mulberry32, randInt, type RNG } from "../lib/rng";
 import { createLif, stepLif, type LifState } from "./lif";
 import {
   accumulateEligibility,
-  addDopamine,
+  addModulateurs,
   createPlasticity,
   type PlasticityState,
 } from "./plasticity";
@@ -44,7 +44,9 @@ export interface BornesVoie {
   kc: Region;
   apl: Region;
   gust: Region;
+  noci: Region;
   mbon: Region;
+  ser: Region;
 }
 
 export interface Voie {
@@ -55,11 +57,24 @@ export interface Voie {
   lifParams: LifParams;
   plastParams: PlasticityParams;
   bornes: BornesVoie;
-  /** Indices CSR des arêtes KC → MBON — les seules à porter de l'éligibilité. */
+  /** Indices CSR des arêtes plastiques — KC → MBON (canal OA) et KC → SER (canal DA). */
   plastSet: Int32Array;
+  /** Arêtes plastiques par canal : `oa` → MBON, `da` → SER. Mesure de sélectivité. */
+  plastParCanal: { oa: Int32Array; da: Int32Array };
+  /**
+   * Lésions des canaux de modulation (rang 3) : un canal coupé ne consolide plus
+   * rien — l'injection sensorielle et le réflexe inné, eux, restent intacts. C'est
+   * la lecture fidèle des bloqueurs pharmacologiques publiés.
+   */
+  lesions: { oa: boolean; da: boolean };
+  /** Flux de bruit des neurones ajoutés au rang 3 (NOCI, SER) — isole le flux
+   *  historique : mêmes graines ⇒ mêmes trajectoires que sans ces régions. */
+  rngBruitSer: RNG;
 }
 
-/** Découpe les populations. KC reçoit tout ce qui reste après les régions nommées. */
+/** Découpe les populations. KC reçoit tout ce qui reste après les régions
+ *  HISTORIQUES — NOCI et SER (rang 3) s'ajoutent AU-DELÀ de p.n : le compte de KC
+ *  et le câblage restent bit-identiques aux portes déjà passées. */
 function decouperVoie(p: VoieParams): BornesVoie {
   const nGlomNeurones = p.nGlom * p.pnParGlom;
   const nFixe = nGlomNeurones + 1 + p.nGust + p.nMBON;
@@ -78,7 +93,12 @@ function decouperVoie(p: VoieParams): BornesVoie {
   const apl = reg("APL", 1, 1);
   const gust = reg("GUST", 1, p.nGust);
   const mbon = reg("MBON", 1, p.nMBON);
-  return { glom, kc, apl, gust, mbon };
+  // NOCI et SER à la FIN de l'ordre : stepLif tire le bruit par neurone dans
+  // l'ordre des indices — les populations historiques gardent leurs tirages et
+  // la dynamique reste bit-identique aux portes déjà passées.
+  const noci = reg("NOCI", 1, p.nNoci);
+  const ser = reg("SER", 1, p.nSer);
+  return { glom, kc, apl, gust, noci, mbon, ser };
 }
 
 /**
@@ -88,20 +108,33 @@ function decouperVoie(p: VoieParams): BornesVoie {
  *   PN → KC        (kAff glomérules distincts par KC, tirés puis un PN au hasard)
  *   KC → APL       (toutes ; excitatrice)
  *   APL → KC       (toutes ; inhibitrice — signe de l'APL, loi de Dale)
- *   KC → MBON      (jusqu'à kOut sorties par KC — LA couche plastique)
- *   GUST → MBON    (toutes ; le réflexe inconditionnel, fixe et fort)
+ *   KC → MBON      (jusqu'à kOut sorties par KC — couche plastique, canal OA)
+ *   KC → SER       (une par KC — couche plastique, canal DA — rang 3)
+ *   GUST → MBON    (toutes ; le réflexe inconditionnel appétitif, fixe et fort)
+ *   NOCI → SER     (toutes ; le réflexe inconditionnel aversif, fixe et fort)
  */
-export function buildVoie(p: VoieParams): { topo: Topology; bornes: BornesVoie; plastSet: Int32Array } {
+export function buildVoie(p: VoieParams): {
+  topo: Topology;
+  bornes: BornesVoie;
+  plastSet: Int32Array;
+  plastChannel: Uint8Array;
+  plastParCanal: { oa: Int32Array; da: Int32Array };
+} {
   if (p.gainAPL > 50) {
     throw new Error(
       `gainAPL = ${p.gainAPL} : au-delà de 50 la boucle oscille (alternance mesurée ≈ 12× le gain utile, §5.5)`,
     );
   }
   const rng = mulberry32(p.seed);
+  // Flux dédié aux arêtes KC → SER : le câblage PN → KC et KC → MBON consomme le
+  // même nombre de tirages du flux principal qu'avant le rang 3 — mêmes graines ⇒
+  // réseaux identiques aux portes déjà passées (les arêtes SER sont des puits,
+  // elles ne réinjectent rien dans la dynamique vue par le MBON).
+  const rngSer = mulberry32(p.seed ^ 0x5e19);
   const b = decouperVoie(p);
-  const n = p.n;
+  const n = p.n + p.nNoci + p.nSer; // les régions du rang 3 s'ajoutent au-delà de p.n
 
-  const regions = [b.glom, b.kc, b.apl, b.gust, b.mbon];
+  const regions = [b.glom, b.kc, b.apl, b.gust, b.mbon, b.noci, b.ser];
   const regionOf = new Uint8Array(n);
   regions.forEach((r, ri) => regionOf.fill(ri, r.start, r.start + r.count));
 
@@ -144,10 +177,20 @@ export function buildVoie(p: VoieParams): { topo: Topology; bornes: BornesVoie; 
     posY[b.gust.start + k] = 0;
     posZ[b.gust.start + k] = -R * 0.9;
   }
+  for (let k = 0; k < p.nNoci; k++) {
+    posX[b.noci.start + k] = (k - p.nNoci / 2) * 0.4;
+    posY[b.noci.start + k] = R * 0.5;
+    posZ[b.noci.start + k] = -R * 0.9;
+  }
   for (let k = 0; k < p.nMBON; k++) {
     posX[b.mbon.start + k] = (k - p.nMBON / 2) * 0.6;
-    posY[b.mbon.start + k] = 0;
+    posY[b.mbon.start + k] = -R * 0.3;
     posZ[b.mbon.start + k] = R * 0.8;
+  }
+  for (let k = 0; k < p.nSer; k++) {
+    posX[b.ser.start + k] = (k - p.nSer / 2) * 0.6;
+    posY[b.ser.start + k] = R * 0.3;
+    posZ[b.ser.start + k] = R * 0.8;
   }
 
   // ── Passe 1 : degrés sortants.
@@ -172,11 +215,14 @@ export function buildVoie(p: VoieParams): { topo: Topology; bornes: BornesVoie; 
   }
   for (let k = 0; k < affPN.length; k++) outOffsets[affPN[k] + 1]++;
   for (let i = b.kc.start; i < b.kc.start + b.kc.count; i++) {
-    outOffsets[i + 1] = 1 + nSortieParKC; // → APL, puis → sorties
+    outOffsets[i + 1] = 1 + nSortieParKC + p.nSer; // → APL, → MBON, → SER
   }
   outOffsets[b.apl.start + 1] = b.kc.count; // APL → tous les KC
   for (let i = b.gust.start; i < b.gust.start + b.gust.count; i++) {
     outOffsets[i + 1] = p.nMBON;
+  }
+  for (let i = b.noci.start; i < b.noci.start + b.noci.count; i++) {
+    outOffsets[i + 1] = p.nSer;
   }
   for (let i = 0; i < n; i++) outOffsets[i + 1] += outOffsets[i];
   const e = outOffsets[n];
@@ -196,8 +242,12 @@ export function buildVoie(p: VoieParams): { topo: Topology; bornes: BornesVoie; 
   for (let k = 0; k < affPN.length; k++) {
     ecrire(affPN[k], b.kc.start + Math.floor(k / p.kAff), p.wGK, randInt(rng, 1, p.delayMax));
   }
-  const plast = new Int32Array(b.kc.count * nSortieParKC);
-  let qPlast = 0;
+  // Deux couches plastiques par KC : → MBON (canal 1 = OA, appétitif) et → SER
+  // (canal 2 = DA, aversif). Chacune ne consolide que sous son modulateur.
+  const plastOA = new Int32Array(b.kc.count * nSortieParKC);
+  const plastDA = new Int32Array(b.kc.count * p.nSer);
+  let qOA = 0;
+  let qDA = 0;
   for (let k = 0; k < b.kc.count; k++) {
     const i = b.kc.start + k;
     ecrire(i, b.apl.start, p.wKA, DELAI_APL);
@@ -206,8 +256,12 @@ export function buildVoie(p: VoieParams): { topo: Topology; bornes: BornesVoie; 
         nSortieParKC === p.nMBON
           ? b.mbon.start + q
           : b.mbon.start + randInt(rng, 0, p.nMBON - 1);
-      plast[qPlast++] = cursor[i]; // l'écriture qui suit est l'arête plastique
+      plastOA[qOA++] = cursor[i]; // l'écriture qui suit est l'arête plastique
       ecrire(i, cible, p.w0, randInt(rng, 1, p.delayMax));
+    }
+    for (let q = 0; q < p.nSer; q++) {
+      plastDA[qDA++] = cursor[i];
+      ecrire(i, b.ser.start + q, p.w0, randInt(rngSer, 1, p.delayMax));
     }
   }
   const wAK = -p.wKA * p.gainAPL;
@@ -215,6 +269,15 @@ export function buildVoie(p: VoieParams): { topo: Topology; bornes: BornesVoie; 
   for (let i = b.gust.start; i < b.gust.start + b.gust.count; i++) {
     for (let q = 0; q < p.nMBON; q++) ecrire(i, b.mbon.start + q, p.wGust, 1);
   }
+  for (let i = b.noci.start; i < b.noci.start + b.noci.count; i++) {
+    for (let q = 0; q < p.nSer; q++) ecrire(i, b.ser.start + q, p.wNoci, 1);
+  }
+
+  const plast = new Int32Array(plastOA.length + plastDA.length);
+  plast.set(plastOA);
+  plast.set(plastDA, plastOA.length);
+  const plastChannel = new Uint8Array(e); // 0 partout → canal OA par défaut
+  for (let q = 0; q < plastDA.length; q++) plastChannel[plastDA[q]] = 2;
 
   // ── CSR entrant, par comptage.
   const inOffsets = new Int32Array(n + 1);
@@ -259,6 +322,8 @@ export function buildVoie(p: VoieParams): { topo: Topology; bornes: BornesVoie; 
     },
     bornes: b,
     plastSet: plast,
+    plastChannel,
+    plastParCanal: { oa: plastOA, da: plastDA },
   };
 }
 
@@ -267,28 +332,41 @@ export function createVoie(
   lifParams: LifParams,
   plastParams: PlasticityParams,
 ): Voie {
-  const { topo, bornes, plastSet } = buildVoie(p);
+  const { topo, bornes, plastSet, plastChannel, plastParCanal } = buildVoie(p);
   return {
     topo,
     lif: createLif(topo, lifParams),
-    plast: createPlasticity(topo, plastParams, plastSet),
+    plast: createPlasticity(topo, plastParams, plastSet, plastChannel),
     params: p,
     lifParams,
     plastParams,
     bornes,
     plastSet,
+    plastParCanal,
+    lesions: { oa: false, da: false },
+    rngBruitSer: mulberry32(p.seed ^ 0xb11),
   };
 }
 
 /**
- * Un tick de la voie : activité, éligibilité, puis dopamine du tick (0 en dehors du
- * renforcement — le déversement cadencé y purge l'éligibilité périmée, ce qui garde les
- * essais indépendants). AUCUNE homéostasie : la stabilité est structurelle (§5.5).
+ * Un tick de la voie : activité, éligibilité, puis les modulateurs du tick (0 en
+ * dehors du renforcement — le déversement cadencé y purge l'éligibilité périmée,
+ * ce qui garde les essais indépendants). `oa` = canal appétitif (sucrose),
+ * `da` = canal aversif (choc) — une lésion masque son canal à la consolidation,
+ * sans toucher ni l'autre canal ni le réflexe inné. AUCUNE homéostasie : la
+ * stabilité est structurelle (§5.5).
  */
-export function stepVoie(v: Voie, rng: RNG, dopamine: number): number {
-  stepLif(v.topo, v.lif, v.lifParams, rng);
+export function stepVoie(v: Voie, rng: RNG, oa: number, da = 0): number {
+  stepLif(v.topo, v.lif, v.lifParams, rng, v.rngBruitSer, v.bornes.noci.start);
   accumulateEligibility(v.topo, v.lif, v.plast, v.plastParams);
-  addDopamine(v.topo, v.lif, v.plast, v.plastParams, dopamine);
+  addModulateurs(
+    v.topo,
+    v.lif,
+    v.plast,
+    v.plastParams,
+    v.lesions.oa ? 0 : oa,
+    v.lesions.da ? 0 : da,
+  );
   return v.lif.spikeCount;
 }
 
@@ -306,10 +384,16 @@ export function injecterOdeur(v: Voie, odeur: Float32Array, gain: number): void 
   }
 }
 
-/** Le stimulus inconditionnel : injection directe dans la voie gustative. */
+/** Le stimulus inconditionnel appétitif : injection directe dans la voie gustative. */
 export function injecterGust(v: Voie, gain: number): void {
   const { gust } = v.bornes;
   for (let i = gust.start; i < gust.start + gust.count; i++) v.lif.inject[i] += gain;
+}
+
+/** Le stimulus inconditionnel aversif : le choc, dans la voie nociceptive. */
+export function injecterChoc(v: Voie, gain: number): void {
+  const { noci } = v.bornes;
+  for (let i = noci.start; i < noci.start + noci.count; i++) v.lif.inject[i] += gain;
 }
 
 /** Décharges des neurones de sortie AU TICK COURANT — la réponse en train de se former. */
@@ -317,6 +401,14 @@ export function dechargesSortie(v: Voie): number {
   const { mbon } = v.bornes;
   let c = 0;
   for (let i = mbon.start; i < mbon.start + mbon.count; i++) c += v.lif.fired[i];
+  return c;
+}
+
+/** Décharges de la sortie défensive (SER) au tick courant. */
+export function dechargesSer(v: Voie): number {
+  const { ser } = v.bornes;
+  let c = 0;
+  for (let i = ser.start; i < ser.start + ser.count; i++) c += v.lif.fired[i];
   return c;
 }
 

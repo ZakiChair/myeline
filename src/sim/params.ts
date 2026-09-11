@@ -39,7 +39,10 @@ export type RegionId =
   | "KC"
   | "APL"
   | "GUST"
-  | "MBON";
+  | "MBON"
+  // Rang 3 : la sortie défensive et le canal nociceptif qui la porte innément.
+  | "NOCI"
+  | "SER";
 
 export interface Region {
   id: RegionId;
@@ -371,10 +374,16 @@ export interface VoieParams {
   nGlom: number;
   /** Neurones de projection par glomérule. Publié ≈ 5–6 ; réduit au banc. */
   pnParGlom: number;
-  /** Neurones de sortie (MBON). Publié ≈ 400 ; 1 suffit pour le réflexe harnaché. */
+  /** Neurones de sortie appétitive (MBON). Publié ≈ 400 ; 1 suffit pour le réflexe
+   *  harnaché. */
   nMBON: number;
-  /** Afférences gustatives (voie du stimulus inconditionné). Inventé. */
+  /** Neurone de sortie défensive (SER). 1 suffit — symétrique du MBON. */
+  nSer: number;
+  /** Afférences gustatives (voie appétitive du stimulus inconditionné). Inventé. */
   nGust: number;
+  /** Afférences nociceptives (voie aversive du stimulus inconditionnel → SER).
+   *  Inventé, symétrique de nGust. */
+  nNoci: number;
   /** Glomérules échantillonnés par cellule de Kenyon. Publié ≈ 5–10 (drosophile). */
   kAff: number;
   /** Neurones de sortie contactés par cellule de Kenyon. INVENTÉ (spec §11, ouvert). */
@@ -391,8 +400,12 @@ export interface VoieParams {
   wKA: number;
   /** Poids initial KC → MBON, la couche plastique. À calibrer (taux spontané). */
   w0: number;
-  /** Poids fixe gustatif → MBON : le réflexe inconditionnel, inné et fort. À calibrer. */
+  /** Poids fixe gustatif → MBON : le réflexe inconditionnel appétitif, inné et fort.
+   *  À calibrer. */
   wGust: number;
+  /** Poids fixe nociceptif → SER : le réflexe inconditionnel aversif, inné et fort.
+   *  À calibrer. */
+  wNoci: number;
   /** Délai axonal maximal, en ticks. */
   delayMax: number;
   wMax: number;
@@ -407,7 +420,9 @@ export const VOIE_DEFAUT: VoieParams = {
   nGlom: 160,
   pnParGlom: 2,
   nMBON: 1,
+  nSer: 1,
   nGust: 8,
+  nNoci: 8,
   kAff: 10,
   kOut: 20,
   // MESURÉ : à wGK 0,05 / densité 0,2 / gainAPL 30, ≈ 2,5 % des KC répondent à une
@@ -421,6 +436,7 @@ export const VOIE_DEFAUT: VoieParams = {
   // potentialisation a toute la marge jusqu'à wMax.
   w0: 0.003,
   wGust: 0.9,
+  wNoci: 0.9,
   delayMax: resoudreDelaiMax(DT_DEFAUT).delayMax,
   wMax: 3.0,
 };

@@ -170,3 +170,57 @@ odeurs (contrebalancées) — elle est **écrite par la contingence** : seule l'
 a précédé le sucrose porte la mémoire. Avec le rang 2, c'est la deuxième preuve que
 le schéma synaptique émergent encode une propriété du monde : une frontière de
 décision entre « annonce la récompense » et « ne l'annonce pas ».
+
+---
+
+# Rang 3 « SER aversif » — dissociation des canaux (2026-08-01)
+
+Sonde : `src/sim/voie-ser.probe.test.ts` — la porte à trois volets sur le MÊME
+cerveau (même graine ⇒ même câblage, répliqué sous chaque condition de lésion).
+Publié : Vergoz et al. 2007 — CS 5 s, US choc 2 s finissant à l'extinction du CS,
+6 essais.
+
+## L'architecture exigée
+
+La porte exige qu'on puisse léser les deux voies de renforcement SÉPARÉMENT — un
+neuromodulateur scalaire unique ne peut pas passer (on ne peut pas léser un signe).
+Implémentation : **deux canaux** dans `addModulateurs` — OA appétitif (sucrose,
+canal 0) et DA aversif (choc, canal 2) — l'assignation de l'insecte, pas celle des
+mammifères. Deux couches plastiques par KC : → MBON (gouvernée OA) et → SER
+(gouvernée DA), chacune consolidée uniquement par son canal (`plastChannel`).
+Une lésion masque un canal à la consolidation sans toucher ni l'autre canal ni
+l'injection sensorielle ni le réflexe inné (lecture fidèle des bloqueurs).
+
+## Mesures (16 sujets × 4 bras intra-sujet)
+
+| bras | dernier essai SER | dernier essai PER | UR SER | UR PER |
+|---|---|---|---|---|
+| intact | **16/16** | **16/16** | 16/16 | 16/16 |
+| lésion OA | 16/16 | **0/16** | 16/16 | 16/16 |
+| lésion DA | **0/16** | 16/16 | 16/16 | 16/16 |
+| SER non apparié | 0/16 | 16/16 | 16/16 | 16/16 |
+
+- Fisher SER apparié vs non apparié au dernier essai : **p = 1,66·10⁻⁹** ≪ 0,01.
+- La double dissociation est TOTALE : chaque lésion tue son apprentissage et
+  épargne l'autre, sans exception de sujet.
+- Les réflexes innés survivent à toute lésion — la lésion coupe l'apprentissage,
+  pas le réflexe (publié : les bloqueurs laissent le réflexe intact).
+
+## Écart assumé
+
+- La notation publiée est pendant les 2 s du choc ; la lecture en taux sature sous
+  le réflexe inné (mesuré : l'UR occupe le plafond du réfractaire, 500/2000 ticks,
+  le composé conditionné invisible dessous). On note l'anticipation [CS, US) —
+  même contenu fonctionnel : la réponse précède le renforcement. Mesure de
+  contrôle : sur CS-seul post-conditionnement, la sortie SER monte de ~17 à ~165
+  — l'apprentissage aversif est réel, seule sa lecture pendant le choc saturait.
+- L'effet est au plafond (0/16 vs 16/16) : la double dissociation est binaire, sans
+  gradation mesurée — la porte ne demandait que la dissociation.
+
+## Ce que ça démontre
+
+Le même tissu, avec le même code épars, supporte deux mémoires de valence opposée
+sur des canaux de renforcement distincts — et la structure causale est correcte :
+couper DA supprime SEUL l'appris aversif, couper OA SEUL l'appétitif. C'est la
+première falsification passée de l'architecture de modulation : le projet aurait
+pu échouer ici si « dopamine = récompense » avait été une convention unique.

@@ -28,6 +28,8 @@ const REGION_COLORS: Record<RegionId, number> = {
   APL: 0xff5c5c,
   GUST: 0xffb84d,
   MBON: 0xf5f5f5,
+  NOCI: 0xff5c5c,
+  SER: 0xffb84d,
 };
 
 const VERT = /* glsl */ `

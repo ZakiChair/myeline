@@ -19,12 +19,20 @@ export interface Fenetre {
  * AVANT l'arrivée de l'US : une réponse qui précède le renforcement est une réponse
  * conditionnée, pas le réflexe. null sur les essais sans CS (rien à noter).
  */
+/** Le canal du renforcement : « oa » = voie appétitive (sucrose), « da » = aversive
+ *  (choc). Chez l'insecte, le renforcement appétitif est octopaminergique et
+ *  l'aversif dopaminergique — deux voies lésables séparément (rang 3). */
+export type CanalRenforcement = "oa" | "da";
+
 export interface EssaiPlan {
   /** Stimulus conditionné : odeur présentée sur [debut, fin). */
   cs: (Fenetre & { odeur: Odeur }) | null;
-  /** Stimulus inconditionné : sucrose sur [debut, fin). */
-  us: Fenetre | null;
-  notation: Fenetre | null;
+  /** Stimulus inconditionné sur [debut, fin) — le canal choisit l'injection et le
+   *  neuromodulateur déversé. */
+  us: (Fenetre & { canal: CanalRenforcement }) | null;
+  /** Fenêtre de comptage, et quelle sortie elle lit : « mbon » = réponse appétitive,
+   *  « ser » = réponse défensive. */
+  notation: (Fenetre & { sortie: "mbon" | "ser" }) | null;
   /** Durée totale de l'enveloppe, ITI compris. */
   duree: number;
 }

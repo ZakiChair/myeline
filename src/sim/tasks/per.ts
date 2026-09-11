@@ -14,14 +14,16 @@ import { gaussTable } from "../bruit";
 import type { PlasticityParams } from "../params";
 import type { EssaiPlan, ResultatEssai } from "../task";
 import {
+  dechargesSer,
   dechargesSortie,
+  injecterChoc,
   injecterGust,
   injecterOdeur,
   stepVoie,
   type Voie,
 } from "../voie";
 import type { Odeur } from "./odors";
-import { essaiCsSeul, essaiUsSeul, itiTicks, type Enveloppe } from "./schedules";
+import { essaiChocSeul, essaiCsSeul, essaiUsSeul, itiTicks, type Enveloppe } from "./schedules";
 
 export interface PerParams {
   env: Enveloppe;
@@ -29,7 +31,14 @@ export interface PerParams {
   injectOdeur: number;
   /** Gain d'injection du sucrose dans la voie gustative. */
   injectGust: number;
-  /** Dopamine émise par tick PENDANT l'US. */
+  /** Gain d'injection du choc dans la voie nociceptive (rang 3). */
+  injectChoc: number;
+  /**
+   * Modulateur émis par tick PENDANT l'US appétitif — le canal octopaminergique
+   * (nommé « da » par héritage avant le rang 3 ; le nommant honnêtement).
+   */
+  oaUS: number;
+  /** Modulateur émis par tick PENDANT l'US aversif — le canal dopaminergique. */
   daUS: number;
   /** Marge ajoutée à 4·tauElig pour l'ITI. */
   margeITI: number;
@@ -53,19 +62,27 @@ export const PER_DEFAUT: PerParams = {
   // code devient épars et sélectif pour l'odeur.
   injectOdeur: 0.6,
   injectGust: 1.5,
+  injectChoc: 1.5,
+  oaUS: 0.02,
   daUS: 0.02,
   margeITI: 2_000,
   margeSeuil: 1.4,
   bruitDecision: 0,
 };
 
-/** Un essai complet : stimuli aux instants du plan, dopamine pendant l'US, notation. */
+/**
+ * Un essai complet : stimuli aux instants du plan, modulateur du canal de l'US
+ * pendant celui-ci, notation sur la sortie choisie par le plan. `urBase` est la
+ * composante de réflexe inné présente dans la fenêtre quand l'US y tombe (SER :
+ * le choc est noté — on soustrait le niveau mesuré sans apprentissage).
+ */
 export function runEssai(
   v: Voie,
   plan: EssaiPlan,
   p: PerParams,
   seuil: number,
   rng: RNG,
+  urBase = 0,
 ): ResultatEssai {
   let compte = 0;
   const not = plan.notation;
@@ -74,11 +91,19 @@ export function runEssai(
       injecterOdeur(v, plan.cs.odeur.intensites, p.injectOdeur);
     }
     const usActif = plan.us !== null && t >= plan.us.debut && t < plan.us.fin;
-    if (usActif) injecterGust(v, p.injectGust);
-    stepVoie(v, rng, usActif ? p.daUS : 0);
-    if (not !== null && t >= not.debut && t < not.fin) compte += dechargesSortie(v);
+    const oa = usActif && plan.us!.canal === "oa" ? p.oaUS : 0;
+    const da = usActif && plan.us!.canal === "da" ? p.daUS : 0;
+    if (usActif) {
+      if (plan.us!.canal === "da") injecterChoc(v, p.injectChoc);
+      else injecterGust(v, p.injectGust);
+    }
+    stepVoie(v, rng, oa, da);
+    if (not !== null && t >= not.debut && t < not.fin) {
+      compte += not.sortie === "ser" ? dechargesSer(v) : dechargesSortie(v);
+    }
   }
-  const score = p.bruitDecision > 0 ? compte + p.bruitDecision * gaussTable(rng) : compte;
+  const brut = compte - urBase;
+  const score = p.bruitDecision > 0 ? brut + p.bruitDecision * gaussTable(rng) : brut;
   return { compte, reponse: score > seuil };
 }
 
@@ -96,11 +121,14 @@ export function calibrerSeuil(
   nCal: number,
   tauSp: number,
   rng: RNG,
+  /** Le constructeur d'essai CS-seul : `essaiCsSeul` (sortie MBON) par défaut,
+   *  `essaiSerSeul` pour le harnais aversif (sortie SER). */
+  essaiFn: (env: Enveloppe, odeur: Odeur, iti: number) => EssaiPlan = essaiCsSeul,
 ): { seuil: number; comptages: Int32Array } {
   const iti = itiTicks(plast.tauElig, p.margeITI);
   const comptages = new Int32Array(nCal);
   for (let k = 0; k < nCal; k++) {
-    comptages[k] = runEssai(v, essaiCsSeul(p.env, odeur, iti), p, 0, rng).compte;
+    comptages[k] = runEssai(v, essaiFn(p.env, odeur, iti), p, 0, rng).compte;
   }
   const tri = Int32Array.from(comptages).sort();
   const idx = Math.min(nCal - 1, Math.floor((1 - tauSp) * nCal));
@@ -132,4 +160,33 @@ export function reflexeInconditionnel(
     if (t >= fenetre.debut && t < fenetre.fin) compte += dechargesSortie(v);
   }
   return compte > seuil;
+}
+
+/**
+ * Le réflexe inconditionnel AVERSIF : le choc seul doit faire répondre la sortie SER —
+ * câblage nociceptif → SER, inné. Renvoie le compte dans la fenêtre du choc : c'est
+ * aussi la composante innée (`urBase`) que le harnais soustrait des essais appariés,
+ * dont la fenêtre notée tombe pendant le choc. Médiane de `n` essais.
+ */
+export function reflexeAversif(
+  v: Voie,
+  p: PerParams,
+  plast: PlasticityParams,
+  n: number,
+  rng: RNG,
+): { urBase: number; comptages: Int32Array } {
+  const iti = itiTicks(plast.tauElig, p.margeITI);
+  const comptages = new Int32Array(n);
+  for (let k = 0; k < n; k++) {
+    const plan = essaiChocSeul(p.env, iti);
+    let compte = 0;
+    for (let t = 0; t < plan.duree; t++) {
+      if (t >= plan.us!.debut && t < plan.us!.fin) injecterChoc(v, p.injectChoc);
+      stepVoie(v, rng, 0); // le choc de CONTRÔLE ne renforce pas : il vérifie le câblage.
+      if (t >= plan.us!.debut && t < plan.us!.fin) compte += dechargesSer(v);
+    }
+    comptages[k] = compte;
+  }
+  const tri = Int32Array.from(comptages).sort();
+  return { urBase: tri[Math.floor(n / 2)], comptages };
 }
