@@ -188,12 +188,19 @@ export function stepOrganism(org: Organism, rng: RNG): { action: MotorAction | n
     // tick du contact — pas une fenêtre continue (la fenêtre laissait les marques
     // de l'autre odeur se réécrire pendant la consolidation : la sélectivité
     // d'odeur mourait). FOOD → OA, TOXIN → DA.
-    if (pas.event === "FOOD") org.usOa = p.voie!.oaDose;
+    // Une source devenue inerte (gain nul) renforce en NÉGATIF : « CS sans US »
+    // — c'est l'extinction, les marques de l'odeur consolident à rebours et la
+    // mémoire apprise s'efface (rang 5c).
+    if (pas.event === "FOOD") {
+      org.usOa = p.world.gainFood > 0 ? p.voie!.oaDose : -p.voie!.extDose;
+    }
     // TOXIN seul — PAS PREDATOR : son CS est le canal ALARM, pas une odeur. À
     // chaque coup, l'odeur dominante du moment (souvent la nourriture, dont
     // l'organisme reste proche) se consolidait sur le canal aversif — mesuré :
     // le SER apprenait « nourriture → danger », la mauvaise association.
-    if (pas.event === "TOXIN") org.usDa = p.voie!.daDose;
+    if (pas.event === "TOXIN") {
+      org.usDa = p.world.lossToxin > 0 ? p.voie!.daDose : -p.voie!.extDose;
+    }
     // Un événement ne consolide que les marques écrites sous SON odeur
     // (portée d'odeur dans addModulateurs).
     const odeurUS = pas.event === "FOOD" ? 1 : pas.event === "TOXIN" ? 2 : 0;

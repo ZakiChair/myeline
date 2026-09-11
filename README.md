@@ -71,7 +71,10 @@ Branche de travail : refonte « voie olfactive » (spec `2026-07-30-myeline-abei
   au contact est ~50/50, le temps seul ne sépare pas la cause. Mesuré : w(SER)
   toxine ≫ nourriture (30–120×), w(MBON) nourriture ≫ toxine, réponses sondées
   sélectives ~3,5×, ~2–3× moins de toxines consommées qu'à module gelé, lésions
-  dissociées, reproductible bit-identique. Le cortex homéostatique reste le
+  dissociées, reproductible bit-identique. **Inversion** : échanger les codes en
+  cours de vie → ré-apprentissage net (×87–270). **Extinction** : toxine inerte
+  → « CS sans US » consolide en négatif, l'évitement s'efface au niveau naïf et
+  l'organisme ré-approche (×3 contacts). Le cortex homéostatique reste le
   témoin interne.
 - **À venir** : échelle complète (n publié).
 

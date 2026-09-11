@@ -36,6 +36,9 @@ const MIN_DECHARGES_REPONDEUR = 30;
 function paramsAvecVoie(seed: number, lr: number): OrganismParams {
   return {
     ...ORGANISME_DEFAUT,
+    // Clone : l'extinction mutera lossToxin en cours de vie — ne pas toucher
+    // l'objet partagé de ORGANISME_DEFAUT.
+    world: { ...ORGANISME_DEFAUT.world },
     worldSeed: 1000 + seed,
     brain: {
       ...ORGANISME_DEFAUT.brain,
@@ -58,6 +61,7 @@ function paramsAvecVoie(seed: number, lr: number): OrganismParams {
       gainEvite: 0.35,
       oaDose: 4,
       daDose: 4,
+      extDose: 4,
       injectOdeur: 1.5,
     },
   };
@@ -266,6 +270,48 @@ describe("voie dans le monde — rang 5 (porte)", () => {
       // bouger d'un epsilon entre sondages.
       expect(apres.poidsSer.t).toBeGreaterThan(avant.poidsSer.t * 0.9);
       expect(apres.poidsMbon.f).toBeGreaterThan(avant.poidsMbon.f * 0.9);
+    }
+  }, 60 * 60_000);
+
+  it("extinction : la toxine devenue inerte est ré-approchée", () => {
+    for (const seed of [1, 2]) {
+      const org = createOrganism(paramsAvecVoie(seed, 0.05));
+      const codeA = org.odeurFood!;
+      const codeB = org.odeurToxin!;
+      const rng = mulberry32(seed * 7919);
+
+      // Phase 1 : apprentissage normal — SER apprend la toxine.
+      runOrganism(org, TICKS, rng);
+      const avant = sonderVoie(org, rng, { a: codeA, b: codeB });
+      expect(avant.poidsSer.t).toBeGreaterThan(4 * avant.poidsSer.f);
+      const t1 = org.metrics.ateToxin;
+
+      // EXTINCTION : la toxine ne punit plus (ni énergie ni reward). Chaque
+      // contact inerte = « CS sans US » → impulsion DA négative → les poids
+      // SER←toxine se déconsolident.
+      org.params.world.lossToxin = 0;
+      org.params.world.rToxin = 0;
+      const f0 = org.metrics.ateFood;
+      runOrganism(org, TICKS, rng);
+      const apres = sonderVoie(org, rng, { a: codeA, b: codeB });
+      const toxin2 = org.metrics.ateToxin - t1;
+      const food2 = org.metrics.ateFood - f0;
+      console.log(
+        `seed ${seed} extinction : w(SER|toxine) ${avant.poidsSer.t.toFixed(3)} → ${apres.poidsSer.t.toFixed(3)} | ` +
+          `SER(t) ${avant.toxin.s} → ${apres.toxin.s} | ` +
+          `phase2 food=${food2} toxin=${toxin2} (phase1 toxin=${t1})`,
+      );
+
+      // L'évitement s'éteint : les poids aversifs de la toxine retombent vers le
+      // niveau naïf et la réponse SER à l'odeur décline.
+      expect(apres.poidsSer.t).toBeLessThan(0.5 * avant.poidsSer.t);
+      expect(apres.toxin.s).toBeLessThan(0.6 * avant.toxin.s);
+
+      // Et le comportement récupère : plus de contacts toxine qu'en phase 1 —
+      // l'organisme ré-approche la source devenue sûre. Dissociation : le canal
+      // appétitif, lui, tient (MBON←nourriture conservé).
+      expect(toxin2).toBeGreaterThan(t1);
+      expect(apres.poidsMbon.f).toBeGreaterThan(0.8 * avant.poidsMbon.f);
     }
   }, 60 * 60_000);
 });

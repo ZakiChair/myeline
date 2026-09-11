@@ -388,10 +388,14 @@ export interface VoieMondeParams {
    *  appétitif / DA aversif). > dumpNow déclenche le déversement immédiat : la
    *  consolidation saisit l'instantané des marques — dominées par l'odeur touchée,
    *  par l'intensité-proximité — au lieu de laisser se réécrire pendant une fenêtre
-   *  des marques de l'autre odeur restée présente (mesuré : la fenêtre continue
-   *  détruit la sélectivité d'odeur). */
+   *  US continue (mesuré : la fenêtre tuait la sélectivité d'odeur). */
   oaDose: number;
   daDose: number;
+  /** Extinction : un contact dont la source est devenue inerte (gainFood /
+   *  lossToxin nul) émet une impulsion NÉGATIVE de cette amplitude — « CS sans
+   *  US » consolide les marques de l'odeur en négatif, la mémoire apprise
+   *  s'efface (rang 5c). */
+  extDose: number;
   /** Gain d'injection de l'odeur dans les glomérules, modulé par l'intensité
    *  perçue au meilleur secteur. */
   injectOdeur: number;

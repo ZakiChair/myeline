@@ -300,3 +300,24 @@ l'ex-nourriture se potentialisent sur SER, celles de l'ex-toxine sur MBON.
 SER(B) ni MBON(A) (leurs marques post-inversion sont étiquetées sous l'autre
 odeur et jamais consolidées par leur canal — pas d'extinction). La carte se
 réécrit par ajout, pas par effacement.
+
+### Extinction (même sonde, test dédié — rang 5c)
+
+La carte se réécrivait par ajout, jamais par effacement : aucun mécanisme ne
+dé-consolidait. Ajout : un contact dont la source est devenue inerte
+(`lossToxin`/`gainFood` nul) émet une impulsion de modulation NÉGATIVE
+(`extDose`) — « CS sans US » — les marques étiquetées de cette odeur consolident
+à rebours. Cascade auto-amplifiante : l'évitement faiblit → plus de contacts →
+extinction plus rapide.
+
+Phase 1 : apprentissage normal (toxine active). Phase 2 : `lossToxin = 0`.
+
+| graine | w(SER←toxine) avant → après | réponse SER(toxine) | contacts toxine |
+|---|---|---|---|
+| 1 | 1,206 → **0,000** | 308 → **1** | 166 → 539 |
+| 2 | 0,507 → **0,000** | 257 → **1** | 146 → 275 |
+
+L'évitement appris s'efface jusqu'au niveau naïf, l'organisme ré-approche la
+source sûre (×3 contacts), et le canal appétitif est épargné (MBON←nourriture
+conservé, nourriture 787–843 en phase 2). La mémoire n'est plus permanente :
+elle est entretenue par les conséquences.
