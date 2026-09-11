@@ -26,6 +26,20 @@ export interface WorldSnap {
   arena: number;
 }
 
+/** État du module olfactif (rang 5), si actif. */
+export interface VoieSnap {
+  /** Odeur dominante injectée au dernier tick : 0 rien, 1 nourriture, 2 toxine. */
+  odeur: number;
+  /** Décharges par tick des sorties du module, lissées sur le batch écoulé. */
+  mbon: number;
+  ser: number;
+  /** Poids moyens des couches apprises, groupés par odeur des KC sources. */
+  wMbonFood: number;
+  wMbonToxin: number;
+  wSerFood: number;
+  wSerToxin: number;
+}
+
 export interface VieSnapshot {
   /** Horloge du réseau (ticks). */
   t: number;
@@ -50,12 +64,22 @@ export interface VieSnapshot {
   rewardMean: number;
   /** Débit réellement mesuré dans le worker (ticks/s), pas un réglage. */
   measuredTps: number;
+  /** Le module olfactif appris — null si inactif. */
+  voie: VoieSnap | null;
 }
 
 export function snapshotOrganism(
   org: Organism,
   da: number,
   measuredTps: number,
+  /** Contexte de lecture du module : répondeurs par code (mesurés au build) et
+   *  taux de décharge MBON/SER lissés par le worker. */
+  voieCtx?: {
+    repFood: Set<number>;
+    repToxin: Set<number>;
+    mbon: number;
+    ser: number;
+  },
 ): VieSnapshot {
   const w = org.world;
   const m = org.metrics;
@@ -95,5 +119,43 @@ export function snapshotOrganism(
     energyMean: m.ticks > 0 ? m.energySum / m.ticks : NaN,
     rewardMean: m.ticks > 0 ? m.rewardSum / m.ticks : NaN,
     measuredTps,
+    voie: org.voie && voieCtx ? voieSnap(org, voieCtx) : null,
+  };
+}
+
+/** Poids moyens des couches apprises, groupés par l'odeur qui fait décharger la
+ *  KC source — la lecture directe de la carte apprise, en direct. */
+function voieSnap(
+  org: Organism,
+  ctx: { repFood: Set<number>; repToxin: Set<number>; mbon: number; ser: number },
+): VoieSnap {
+  const v = org.voie!;
+  const set = v.plast.plastSet!;
+  const src = v.plast.plastSrc!;
+  const dst = v.topo.outTarget;
+  const poids = v.topo.w;
+  const m0 = v.bornes.mbon.start;
+  const m1 = m0 + v.bornes.mbon.count;
+  const somme = { mf: 0, mt: 0, nf: 0, nt: 0, sf: 0, st: 0, kf: 0, kt: 0 };
+  for (let q = 0; q < set.length; q++) {
+    const e = set[q];
+    const s = src[q];
+    const w = poids[e];
+    if (dst[e] >= m0 && dst[e] < m1) {
+      if (ctx.repFood.has(s)) { somme.mf += w; somme.nf++; }
+      else if (ctx.repToxin.has(s)) { somme.mt += w; somme.nt++; }
+    } else {
+      if (ctx.repFood.has(s)) { somme.sf += w; somme.kf++; }
+      else if (ctx.repToxin.has(s)) { somme.st += w; somme.kt++; }
+    }
+  }
+  return {
+    odeur: org.odeurCourante,
+    mbon: ctx.mbon,
+    ser: ctx.ser,
+    wMbonFood: somme.nf > 0 ? somme.mf / somme.nf : 0,
+    wMbonToxin: somme.nt > 0 ? somme.mt / somme.nt : 0,
+    wSerFood: somme.kf > 0 ? somme.sf / somme.kf : 0,
+    wSerToxin: somme.kt > 0 ? somme.st / somme.kt : 0,
   };
 }

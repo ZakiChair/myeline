@@ -13,7 +13,8 @@
 
 import { mulberry32 } from "../lib/rng";
 import { createOrganism, stepOrganism, type Organism } from "../sim/organism";
-import { ORGANISME_DEFAUT } from "../sim/params";
+import { LIF_DEFAUT, ORGANISME_DEFAUT, PLASTICITE_DEFAUT, VOIE_DEFAUT } from "../sim/params";
+import { injecterOdeur, stepVoie } from "../sim/voie";
 import { snapshotOrganism } from "../sim/snapshot";
 import type { WorkerIn, WorkerOut } from "./protocol";
 
@@ -30,6 +31,14 @@ interface Session {
   org: Organism;
   rng: () => number;
   activity: Float32Array;
+  /** Taille du module olfactif (0 si inactif) — l'activité s'étend de n à n+nVoie. */
+  nVoie: number;
+  /** Répondeurs par code, mesurés au build par sondage — groupent les poids appris. */
+  repFood: Set<number>;
+  repToxin: Set<number>;
+  /** Décharges/tick des sorties du module, lissées par batch. */
+  mbonRate: number;
+  serRate: number;
 }
 
 let session: Session | null = null;
@@ -48,6 +57,31 @@ function post(msg: WorkerOut, transfer: Transferable[] = []): void {
   (self as unknown as Worker).postMessage(msg, { transfer });
 }
 
+/** Sondage : les KC qui répondent à chaque code — servent à grouper les poids
+ *  appris dans l'instantané (mesuré une fois au build, avant tout apprentissage). */
+function sondageCodes(org: Organism, rng: () => number): { repFood: Set<number>; repToxin: Set<number> } {
+  const v = org.voie!;
+  const kc0 = v.bornes.kc.start;
+  const kc1 = kc0 + v.bornes.kc.count;
+  const sonder = (odeur: NonNullable<Organism["odeurFood"]>): Set<number> => {
+    for (let t = 0; t < 500; t++) stepVoie(v, rng, 0, 0);
+    const comptes = new Map<number, number>();
+    for (let t = 0; t < 2000; t++) {
+      injecterOdeur(v, odeur.intensites, 1.5);
+      stepVoie(v, rng, 0, 0);
+      const sp = v.lif.spikes;
+      for (let j = 0; j < v.lif.spikeCount; j++) {
+        const i = sp[j];
+        if (i >= kc0 && i < kc1) comptes.set(i, (comptes.get(i) ?? 0) + 1);
+      }
+    }
+    const rep = new Set<number>();
+    for (const [i, c] of comptes) if (c >= 30) rep.add(i);
+    return rep;
+  };
+  return { repFood: sonder(org.odeurFood!), repToxin: sonder(org.odeurToxin!) };
+}
+
 function build(n: number, seed: number, worldSeed: number): Session {
   const org = createOrganism(
     {
@@ -56,6 +90,27 @@ function build(n: number, seed: number, worldSeed: number): Session {
       brain: {
         ...ORGANISME_DEFAUT.brain,
         topology: { ...ORGANISME_DEFAUT.brain.topology, n, seed },
+      },
+      // Rang 5 : la voie olfactive est greffée — le même régime que la porte.
+      voie: {
+        actif: true,
+        voie: { ...VOIE_DEFAUT, seed: seed ^ 0x5eed },
+        lif: LIF_DEFAUT,
+        plast: {
+          ...PLASTICITE_DEFAUT,
+          lr: 0.05,
+          tauElig: 500,
+          eligTrace: true,
+          seuilElig: 0.2,
+          fraisMin: 0.3,
+        },
+        gainApproche: 0.2,
+        gainDir: 0.3,
+        gainEvite: 0.35,
+        oaDose: 4,
+        daDose: 4,
+        extDose: 4,
+        injectOdeur: 1.5,
       },
     },
     {
@@ -68,31 +123,62 @@ function build(n: number, seed: number, worldSeed: number): Session {
       },
     },
   );
-  return { org, rng: mulberry32(seed ^ 0x9e3779b9), activity: new Float32Array(n) };
+  const rng = mulberry32(seed ^ 0x9e3779b9);
+  const { repFood, repToxin } = sondageCodes(org, rng);
+  const nVoie = org.voie ? org.voie.topo.n : 0;
+  return {
+    org,
+    rng,
+    activity: new Float32Array(n + nVoie),
+    nVoie,
+    repFood,
+    repToxin,
+    mbonRate: 0,
+    serRate: 0,
+  };
 }
 
 function envoyerPret(s: Session): void {
   const { topo } = s.org.brain;
   const n = topo.n;
-  const positions = new Float32Array(3 * n);
+  const nv = s.nVoie;
+  const positions = new Float32Array(3 * (n + nv));
+  let rayon = 1;
   for (let i = 0; i < n; i++) {
     positions[3 * i] = topo.posX[i];
     positions[3 * i + 1] = topo.posY[i];
     positions[3 * i + 2] = topo.posZ[i];
+    if (Math.abs(topo.posX[i]) > rayon) rayon = Math.abs(topo.posX[i]);
+  }
+  // Le module olfactif en surimpression : sa calotte, décalée à droite du
+  // cerveau — visible comme un organe annexe qui s'anime sous les odeurs.
+  if (s.org.voie) {
+    const vt = s.org.voie.topo;
+    for (let i = 0; i < nv; i++) {
+      positions[3 * (n + i)] = vt.posX[i] + rayon * 1.6;
+      positions[3 * (n + i) + 1] = vt.posY[i];
+      positions[3 * (n + i) + 2] = vt.posZ[i];
+    }
+  }
+  const regions = topo.regions.map((r) => ({
+    id: r.id,
+    start: r.start,
+    count: r.count,
+    pools: r.pools,
+    poolSize: r.poolSize,
+  }));
+  if (s.org.voie) {
+    for (const r of s.org.voie.topo.regions) {
+      regions.push({ id: r.id, start: n + r.start, count: r.count, pools: r.pools, poolSize: r.poolSize });
+    }
   }
   post(
     {
       type: "ready",
-      n,
+      n: n + nv,
       e: topo.e,
       positions,
-      regions: topo.regions.map((r) => ({
-        id: r.id,
-        start: r.start,
-        count: r.count,
-        pools: r.pools,
-        poolSize: r.poolSize,
-      })),
+      regions,
       running,
     },
     [positions.buffer],
@@ -109,11 +195,31 @@ function batch(): void {
   const steps = Math.max(1, Math.min(MAX_BATCH, Math.round((dt * hz) / 1000)));
 
   const { org, rng, activity } = s;
+  const nB = org.brain.topo.n;
+  let mb = 0;
+  let sv = 0;
+  const m0 = org.voie ? org.voie.bornes.mbon.start : 0;
+  const m1 = org.voie ? m0 + org.voie.bornes.mbon.count : 0;
+  const s0 = org.voie ? org.voie.bornes.ser.start : 0;
+  const s1 = org.voie ? s0 + org.voie.bornes.ser.count : 0;
   for (let k = 0; k < steps; k++) {
     stepOrganism(org, rng);
     for (let i = 0; i < activity.length; i++) activity[i] *= DECAY;
     const spikes = org.brain.lif.spikes;
     for (let j = 0; j < org.brain.lif.spikeCount; j++) activity[spikes[j]] = 1;
+    if (org.voie) {
+      const vs = org.voie.lif.spikes;
+      for (let j = 0; j < org.voie.lif.spikeCount; j++) {
+        const i = vs[j];
+        activity[nB + i] = 1;
+        if (i >= m0 && i < m1) mb++;
+        else if (i >= s0 && i < s1) sv++;
+      }
+    }
+  }
+  if (org.voie) {
+    s.mbonRate = s.mbonRate * 0.8 + (mb / steps) * 0.2;
+    s.serRate = s.serRate * 0.8 + (sv / steps) * 0.2;
   }
 
   // La cadence affichée est celle LIVRÉE (ticks / temps réel écoulé), pas la
@@ -129,9 +235,19 @@ function batch(): void {
   }
   const vue = new Float32Array(buf ?? new ArrayBuffer(activity.byteLength));
   vue.set(activity);
-  post({ type: "frame", activity: vue, snap: snapshotOrganism(org, lastDa, measuredTps) }, [
-    vue.buffer,
-  ]);
+  post(
+    {
+      type: "frame",
+      activity: vue,
+      snap: snapshotOrganism(org, lastDa, measuredTps, {
+        repFood: s.repFood,
+        repToxin: s.repToxin,
+        mbon: s.mbonRate,
+        ser: s.serRate,
+      }),
+    },
+    [vue.buffer],
+  );
 }
 
 function setRunning(v: boolean): void {

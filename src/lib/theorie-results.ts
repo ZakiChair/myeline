@@ -12,7 +12,7 @@ export interface BarreComparative {
 export interface Preuve {
   id: string;
   titre: string;   // ce qui est démontré, en clair
-  acte: string;    // "III" | "IV"
+  acte: string;    // "III" | "IV" | "V" — la voie olfactive est l'acte V
   source: string;  // fichier:ligne de l'assertion
   graines: number;
   garanti: string;
@@ -88,6 +88,66 @@ export const PREUVES: PreuveAvecBarres[] = [
       { label: "appris", value: 0.97, caption: "0.97", fort: true },
       { label: "yoked", value: 0.46, caption: "0.46" },
       { label: "aléatoire", value: 0.50, caption: "0.50" },
+    ],
+  },
+  {
+    id: "voie-acquisition", acte: "V", graines: 16,
+    titre: "La voie olfactive apprend une odeur par contingence",
+    source: "src/sim/voie.probe.test.ts",
+    garanti: "Apparié 16/16 au dernier essai vs non-apparié 0/16 (Fisher p = 1,66·10⁻⁹) ; inversé et gelé plats.",
+    observe: "acquisition 0 → 100 % en 5 essais ; CS seul → réponse apprise",
+    barres: [
+      { label: "apparié (CS→US)", value: 1.0, caption: "100 %", fort: true },
+      { label: "non apparié", value: 0.0, caption: "0 %" },
+      { label: "inversé (US→CS)", value: 0.0, caption: "0 %" },
+    ],
+  },
+  {
+    id: "voie-generalisation", acte: "V", graines: 32,
+    titre: "La mémoire encode la similarité des odeurs",
+    source: "src/sim/voie-generalisation.probe.test.ts",
+    garanti: "Réponse strictement décroissante avec la distance ; ratio 1C/3C ∈ [1,7 ; 2,9].",
+    observe: "100 / 72 / 53 / 25 % puis plancher 13 % — ratio 2,88",
+    barres: [
+      { label: "odeur conditionnée", value: 1.0, caption: "100 %", fort: true },
+      { label: "1C", value: 0.72, caption: "72 %" },
+      { label: "2C", value: 0.53, caption: "53 %" },
+      { label: "3C", value: 0.25, caption: "25 %" },
+      { label: "disjointe", value: 0.13, caption: "13 %" },
+    ],
+  },
+  {
+    id: "voie-discrimination", acte: "V", graines: 32,
+    titre: "Discrimination A+/B− : la contingence, pas l'odeur",
+    source: "src/sim/voie-discrimination.probe.test.ts",
+    garanti: "McNemar p < 0,01, contrebalancement symétrique dans les deux groupes.",
+    observe: "CS+ 100 % vs CS− 38 % (p = 9,5·10⁻⁷) ; 37,5 % de non-discriminateurs (publié : 31,5 %)",
+    barres: [
+      { label: "CS+ renforcée", value: 1.0, caption: "100 %", fort: true },
+      { label: "CS− jamais renforcée", value: 0.38, caption: "38 %" },
+    ],
+  },
+  {
+    id: "voie-dissociation", acte: "V", graines: 16,
+    titre: "Deux mémoires de valence opposée, dissociables par lésion",
+    source: "src/sim/voie-ser.probe.test.ts",
+    garanti: "Lésion OA → PER mort / SER vivant ; lésion DA → l'inverse ; réflexes innés intacts.",
+    observe: "double dissociation totale 16/16 ; SER apparié 16/16 vs non apparié 0/16",
+    barres: [
+      { label: "SER intact / PER intact", value: 1.0, caption: "16/16", fort: true },
+      { label: "PER sous lésion OA", value: 0.0, caption: "0/16" },
+      { label: "SER sous lésion DA", value: 0.0, caption: "0/16" },
+    ],
+  },
+  {
+    id: "voie-monde", acte: "V", graines: 2,
+    titre: "L'organisme libre évite la toxine apprise par son odeur",
+    source: "src/sim/_voie-monde.probe.test.ts",
+    garanti: "Toxine < 0,75× gelé, w(SER|toxine) > 4× w(SER|nourriture), lésions dissociées, reproductible bit-identique.",
+    observe: "contacts toxine 166 vs 343 gelé ; inversion ×87–270 ; extinction → niveau naïf",
+    barres: [
+      { label: "toxine · module actif", value: 166 / 343, caption: "166", fort: true },
+      { label: "toxine · module gelé", value: 1.0, caption: "343" },
     ],
   },
 ];

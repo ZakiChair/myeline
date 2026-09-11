@@ -7,7 +7,7 @@
 
 import dynamic from "next/dynamic";
 import { useState } from "react";
-import { Gauge, GitBranch, Pause, Play, RotateCcw } from "lucide-react";
+import { Gauge, GitBranch, Pause, Play, RotateCcw, Wind } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import WorldView from "@/components/vie/WorldView";
@@ -135,12 +135,46 @@ export default function VieMode() {
             </div>
           </div>
 
+          <div className="rounded-2xl border border-emerald-300/15 bg-emerald-300/[0.03] p-3.5 backdrop-blur-md">
+            <h3 className="mb-3 flex items-center gap-1.5 text-[11px] font-medium tracking-wider text-emerald-200/70 uppercase">
+              <Wind size={12} />
+              Voie olfactive — apprise
+            </h3>
+            <div className="grid grid-cols-2 gap-3 font-mono">
+              <Stat
+                label="odeur dominante"
+                value={
+                  s?.voie ? (s.voie.odeur === 1 ? "nourriture" : s.voie.odeur === 2 ? "toxine" : "—") : "—"
+                }
+              />
+              <Stat
+                label="mbon / ser"
+                value={s?.voie ? `${s.voie.mbon.toFixed(2)} / ${s.voie.ser.toFixed(2)}` : "—"}
+              />
+              <Stat
+                label="w approche ← nourriture"
+                value={s?.voie ? s.voie.wMbonFood.toFixed(2) : "—"}
+                accent
+              />
+              <Stat
+                label="w évitement ← toxine"
+                value={s?.voie ? s.voie.wSerToxin.toFixed(2) : "—"}
+                accent
+              />
+            </div>
+            <p className="mt-2 text-[10px] leading-relaxed text-white/35">
+              Les poids croissent en direct quand l&apos;odeur annonce la conséquence —
+              approche pour la nourriture, évitement pour la toxine.
+            </p>
+          </div>
+
           <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-3.5 text-[11px] leading-relaxed text-white/50 backdrop-blur-md">
             <span className="text-white/80">Ce qui est mesuré.</span> Activité, décisions,
             énergie, vies — tout vient du réseau tourant dans un worker.{" "}
-            <span className="text-white/80">Ce qui n&apos;est pas démontré :</span>{" "}
-            l&apos;apprentissage — le lot 1 s&apos;est soldé par un résultat négatif,
-            documenté dans /theorie et le journal de calibration.
+            <span className="text-white/80">L&apos;apprentissage est actif :</span>{" "}
+            la voie olfactive apprend les odeurs du monde en direct (rang 5 — porte
+            `_voie-monde.probe.test.ts` : évitement toxine ×0,3–0,6, dissociation des
+            lésions, inversion et extinction ré-apprises).
           </div>
         </div>
       </aside>
@@ -160,7 +194,10 @@ export default function VieMode() {
               construction du réseau ({fmt(sim.size)} neurones)…
             </div>
           )}
-          <Tag>Cerveau — {fmt(sim.size)} neurones, {fmt(sim.e)} arêtes</Tag>
+          <Tag>
+            Cerveau — {fmt(sim.size)} neurones, {fmt(sim.e)} arêtes · voie olfactive en
+            surimpression
+          </Tag>
         </div>
         <div className="flex min-h-[46vh] flex-col lg:w-[340px] lg:min-h-0 lg:shrink-0">
           <div className="myeline-stage relative min-h-[260px] flex-1 border-b border-white/[0.06]">

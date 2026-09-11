@@ -83,6 +83,13 @@ interface Mesure {
   ateFood: number;
   ateToxin: number;
   vies: number;
+  /** Durée de vie MOYENNE — le lien entre apprentissage et fitness. La
+   *  distribution est bimodale (mesuré : p50 137 vs 483 mais p90 3075 vs 1591,
+   *  max 12 019 vs 3 300) — la conduite apprise amplifie la variance : plus de
+   *  morts précoces (57 % de vies <300 t vs 35 % — l'organisme s'expose aux
+   *  frappes en stationnant près des sources, hits 232 vs 169), mais la queue
+   *  est bien plus longue. C'est la moyenne qui porte le signal. */
+  vieMoyenne: number;
   reponse: { food: Sondage; toxin: Sondage; poidsSer: PoidsGroupes; poidsMbon: PoidsGroupes };
 }
 
@@ -153,10 +160,12 @@ function experienceVoie(seed: number, lr: number, lesion?: "oa" | "da"): Mesure 
   if (lesion) org.voie!.lesions[lesion] = true;
   const rng = mulberry32(seed * 7919);
   runOrganism(org, TICKS, rng);
+  const vies = org.metrics.lifetimes;
   return {
     ateFood: org.metrics.ateFood,
     ateToxin: org.metrics.ateToxin,
-    vies: org.metrics.lifetimes.length,
+    vies: vies.length,
+    vieMoyenne: vies.length > 0 ? vies.reduce((a, b) => a + b, 0) / vies.length : 0,
     reponse: sonderVoie(org, rng),
   };
 }
@@ -179,7 +188,8 @@ describe("voie dans le monde — rang 5 (porte)", () => {
         `seed ${seed} plastique : SER(t)=${toxin.s} SER(f)=${food.s} | ` +
           `w(SER) t=${poidsSer.t.toFixed(3)} f=${poidsSer.f.toFixed(3)} ∅=${poidsSer.autre.toFixed(3)} | ` +
           `w(MBON) f=${poidsMbon.f.toFixed(3)} t=${poidsMbon.t.toFixed(3)} ∅=${poidsMbon.autre.toFixed(3)} | ` +
-          `toxin=${plast.ateToxin}/${gele.ateToxin} food=${plast.ateFood}/${gele.ateFood}`,
+          `toxin=${plast.ateToxin}/${gele.ateToxin} food=${plast.ateFood}/${gele.ateFood} ` +
+          `vieMoy=${plast.vieMoyenne.toFixed(0)}/${gele.vieMoyenne.toFixed(0)}`,
       );
 
       // Poids sélectifs : l'aversif apprend la toxine, l'appétitif la nourriture.
@@ -208,6 +218,11 @@ describe("voie dans le monde — rang 5 (porte)", () => {
       // nourriture, elle, tient (mesuré ~0,3–0,6× et ~0,8–1,5×).
       expect(plast.ateToxin).toBeLessThan(0.75 * gele.ateToxin);
       expect(plast.ateFood).toBeGreaterThan(0.6 * gele.ateFood);
+
+      // Fitness : l'organisme apprenant survit plus longtemps EN MOYENNE —
+      // moins de toxines et plus de nourriture allongent la queue de vie
+      // (mesuré ~×1,4 ; la médiane, elle, chute — bimodalité documentée).
+      expect(plast.vieMoyenne).toBeGreaterThan(1.15 * gele.vieMoyenne);
     }
   }, 60 * 60_000);
 
