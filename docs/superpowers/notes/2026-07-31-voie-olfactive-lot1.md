@@ -120,3 +120,53 @@ Le réseau n'apprend pas « répondre » — il apprend **« cette odeur-là »*
 est une fonction décroissante monotone de la similarité à l'odeur renforcée. La
 mémoire écrite dans les synapses encode une métrique de l'espace des odeurs — une
 propriété de l'environnement, pas des stimuli.
+
+---
+
+# Rang 4 « discrimination A+/B− » — mesures de la porte (2026-08-01)
+
+Sonde : `src/sim/voie-discrimination.probe.test.ts` — 5 essais CS+ appariés
+entrelacés avec 5 essais CS− jamais renforcés (publié : Mota & Giurfa 2010,
+n = 111). Contrebalancement : moitié des sujets A+/B−, moitié B+/A−.
+
+## Choix de distance CS+/CS− (sonde jetable, 16–24 sujets)
+
+| distance | CS− à l'essai 5 | verdict |
+|---|---|---|
+| 16/32 | 100 % | indiscernable — généralisation totale |
+| 24/32 | 100 % | trop proche : les KC partagées potentialisées à chaque essai CS+ portent le CS− |
+| 28/32 | 79 % | McNemar 5 vs 0, p = 3e-2 — marginal |
+| 30/32 | 38 % | **retenu** — discrimination nette + non-discriminateurs au taux publié |
+| 32/32 | 25 % | propre mais quasi trivial |
+
+Le CS− ne redescend pas par un mécanisme d'inhibition : il monte parce que les KC
+partagées entre les deux codes sont potentialisées à chaque essai CS+ (la
+généralisation du rang 2, vue en dynamique). La discrimination vient de ce qu'il en
+reste peu à distance 30 (~2 glomérules partagés) — l'affûtage, chez l'animal, repose
+aussi sur une inhibition associative du CS−, non modélisée ici.
+
+## Le gradient mesuré (32 sujets, distance 30)
+
+| essai | CS+ | CS− |
+|---|---|---|
+| 1 | 0 % | 0 % |
+| 2 | 100 % | 13 % |
+| 3 | 100 % | 16 % |
+| 4 | 100 % | 41 % |
+| 5 | 100 % | 38 % |
+
+- McNemar sur les discordants du dernier essai : **20 vs 0, p = 9,54·10⁻⁷** ≪ 0,01.
+- Contrebalancement : groupe A+ → 11 vs 0 ; groupe B+ → 9 vs 0 — la discrimination
+  suit la contingence, pas l'odeur.
+- **37,5 % de sujets (12/32) répondent encore au CS− à l'essai 5** — publié : 31,5 %
+  échouent la discrimination initiale. La porte exige l'effet de groupe, pas
+  l'unanimité : tenu.
+- Gelé (lr = 0, 12 sujets) : CS+ 0/12, CS− 1/12 — plat.
+
+## Ce que ça démontre
+
+La différence de réponse entre les deux odeurs n'est ni dans le câblage ni dans les
+odeurs (contrebalancées) — elle est **écrite par la contingence** : seule l'odeur qui
+a précédé le sucrose porte la mémoire. Avec le rang 2, c'est la deuxième preuve que
+le schéma synaptique émergent encode une propriété du monde : une frontière de
+décision entre « annonce la récompense » et « ne l'annonce pas ».

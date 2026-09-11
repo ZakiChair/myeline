@@ -275,3 +275,98 @@ export function runGeneralisation(p: GeneralisationParams): ResultatGeneralisati
   }
   return { points, sujetsInclus: inclus, sujetsExclus: exclus, ticksTotal };
 }
+
+// ---------------------------------------------------------------------------
+// Rang 4 — discrimination différentielle A+/B− (Mota & Giurfa 2010, n = 111) :
+// 5 essais CS+ appariés ENTRELACÉS avec 5 essais CS− jamais renforcés.
+// Contrebalancement obligatoire (moitié A+/B−, moitié B+/A−) : sans lui, un
+// décalage mesure la préférence du câblage pour une odeur, pas la contingence.
+// Publié : ~31,5 % des abeilles échouent la discrimination initiale — la porte
+// exige un effet de groupe, pas l'unanimité.
+
+export interface DiscriminationParams {
+  nSujets: number;
+  /** Paires CS+/CS− par sujet. Publié : 5. */
+  nPaires: number;
+  /** Distance CS+ ↔ CS− en glomérules remplacés (axe du rang 2). */
+  distance: number;
+  voie: VoieParams;
+  lif: LifParams;
+  plast: PlasticityParams;
+  per: PerParams;
+  nCal: number;
+  tauSp: number;
+  graineSujets: number;
+  graineOdeurs: number;
+}
+
+export interface SujetDiscrimination {
+  /** 0 : A+/B−, 1 : B+/A− — le contrebalancement. */
+  groupe: 0 | 1;
+  exclu: boolean;
+  seuil: number;
+  reponsesPlus: boolean[];
+  reponsesMoins: boolean[];
+  comptesPlus: number[];
+  comptesMoins: number[];
+}
+
+export interface ResultatDiscrimination {
+  sujets: SujetDiscrimination[];
+  sujetsInclus: number;
+  sujetsExclus: number;
+  ticksTotal: number;
+}
+
+export function runDiscrimination(p: DiscriminationParams): ResultatDiscrimination {
+  const sujets: SujetDiscrimination[] = [];
+  const iti = itiTicks(p.plast.tauElig, p.per.margeITI);
+  let inclus = 0;
+  let exclus = 0;
+  let ticksTotal = 0;
+
+  for (let s = 0; s < p.nSujets; s++) {
+    const graineSujet = p.graineSujets ^ s;
+    const groupe: 0 | 1 = (s & 1) as 0 | 1;
+    const sujet: Voie = createVoie({ ...p.voie, seed: graineSujet }, p.lif, p.plast);
+    const rng = mulberry32(graineSujet ^ 0x64697363);
+    const A = genererOdeur(mulberry32(p.graineOdeurs ^ s), p.voie.nGlom, "A");
+    const B = declinerN(mulberry32(graineSujet ^ 0x0d0e11), A, p.distance, "B");
+    // Contrebalancement : le CS+ du groupe 0 est A, celui du groupe 1 est B.
+    const csPlus = groupe === 0 ? A : B;
+    const csMoins = groupe === 0 ? B : A;
+
+    const { seuil } = calibrerSeuil(sujet, csPlus, p.per, p.plast, p.nCal, p.tauSp, rng);
+    const jr: SujetDiscrimination = {
+      groupe,
+      exclu: false,
+      seuil,
+      reponsesPlus: [],
+      reponsesMoins: [],
+      comptesPlus: [],
+      comptesMoins: [],
+    };
+    if (!reflexeInconditionnel(sujet, p.per, p.plast, seuil, rng)) {
+      jr.exclu = true;
+      exclus++;
+      sujets.push(jr);
+      continue;
+    }
+    inclus++;
+
+    // Essais entrelacés : CS+ apparié, CS− seul — CS+ en premier (publié).
+    for (let k = 0; k < p.nPaires; k++) {
+      const plus = calendrier("apparie", 1, csPlus, ENVELOPPE_DEFAUT, iti, graineSujet)[0];
+      const moins = essaiCsSeul(ENVELOPPE_DEFAUT, csMoins, iti);
+      ticksTotal += plus.duree + moins.duree;
+      const rp = runEssai(sujet, plus, p.per, seuil, rng);
+      const rm = runEssai(sujet, moins, p.per, seuil, rng);
+      jr.reponsesPlus.push(rp.reponse);
+      jr.reponsesMoins.push(rm.reponse);
+      jr.comptesPlus.push(rp.compte);
+      jr.comptesMoins.push(rm.compte);
+    }
+    sujets.push(jr);
+  }
+  return { sujets, sujetsInclus: inclus, sujetsExclus: exclus, ticksTotal };
+}

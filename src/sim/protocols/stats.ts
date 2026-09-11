@@ -32,3 +32,18 @@ export function fisherExact(a: number, b: number, c: number, d: number): number 
   for (let x = lo; x <= hi; x++) num += binom(r1, x) * binom(n - r1, c1 - x);
   return Number(num) / Number(total);
 }
+
+/**
+ * McNemar exact, unilatéral : sur les paires DISCORDANTES (b sujets « CS+ seul »,
+ * c sujets « CS− seul »), P(X ≥ b) sous Binomiale(b+c, 1/2). LE test de la
+ * discrimination différentielle : les données sont intra-sujet et binaires.
+ */
+export function mcnemarExact(b: number, c: number): number {
+  const n = b + c;
+  if (n === 0) return 1;
+  // P(X ≥ b) = Σ_{k≥b} C(n,k) / 2^n — exact en BigInt.
+  const total = UN << BigInt(n);
+  let num = ZERO;
+  for (let k = b; k <= n; k++) num += binom(n, k);
+  return Number(num) / Number(total);
+}

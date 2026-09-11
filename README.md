@@ -52,9 +52,14 @@ Branche de travail : refonte « voie olfactive » (spec `2026-07-30-myeline-abei
   `voie-generalisation.probe.test.ts`) : code KC épars (~2,5 % de répondantes), la
   réponse à une odeur déclinée décroît monotone avec la distance (72/53/25 % aux
   distances calibrées 1/2/3 carbones, ratio 2,88 ∈ [1,7 ; 2,9]), gelé plat.
+- **Fait** : rang 4 « discrimination A+/B− » — **la porte est passée** (sonde
+  `voie-discrimination.probe.test.ts`) : 5 essais entrelacés CS+/CS−, CS+ → 100 %,
+  CS− → 38 % (monte par généralisation puis reflue), McNemar p = 9,5·10⁻⁷,
+  contrebalancement symétrique, ~38 % de non-discriminateurs (publié : 31,5 %),
+  gelé plat.
   Mesures et limites : `docs/superpowers/notes/2026-07-31-voie-olfactive-lot1.md`.
-- **À venir** : discrimination A+/B− (rang 4), SER aversif (rang 3), puis échelle
-  complète.
+- **À venir** : SER aversif (rang 3 — la porte à trois volets : lésions
+  dopamine/octopamine dissociées), puis échelle complète.
 
 ⚠️ Le mot « abeille » n'apparaît ni dans le code ni dans l'interface avant que le lot 3
 soit passé (règle de nommage décidée le 2026-07-30).
