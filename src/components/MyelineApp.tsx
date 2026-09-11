@@ -7,7 +7,6 @@ import { Header, type AppMode } from "@/components/Header";
 import { ControlPanel } from "@/components/ControlPanel";
 import { StatsPanel } from "@/components/StatsPanel";
 import { ScaleMode } from "@/components/ScaleMode";
-import { CreatureMode } from "@/components/CreatureMode";
 import { OrganismeMode } from "@/components/OrganismeMode";
 import { useSimulation } from "@/hooks/useSimulation";
 import { useTheme } from "@/hooks/useTheme";
@@ -95,8 +94,6 @@ export function MyelineApp() {
         <VieMode />
       ) : mode === "scale" ? (
         <ScaleMode theme={theme} />
-      ) : mode === "creature" ? (
-        <CreatureMode theme={theme} />
       ) : mode === "organisme" ? (
         <OrganismeMode theme={theme} />
       ) : (

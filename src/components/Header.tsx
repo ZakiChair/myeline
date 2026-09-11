@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Activity, BookOpen, Boxes, Brain, Bug, Sparkle } from "lucide-react";
+import { Activity, BookOpen, Boxes, Brain, Sparkle } from "lucide-react";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 
-export type AppMode = "vie" | "studio" | "scale" | "creature" | "organisme";
+export type AppMode = "vie" | "studio" | "scale" | "organisme";
 
 interface Props {
   themeId: string;
@@ -80,17 +80,6 @@ export function Header({ themeId, onThemeChange, mode, onModeChange }: Props) {
           >
             <Boxes size={12} />
             Échelle
-          </button>
-          <button
-            type="button"
-            onClick={() => onModeChange("creature")}
-            aria-pressed={mode === "creature"}
-            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] transition ${
-              mode === "creature" ? "bg-white/10 text-white" : "text-white/45 hover:text-white/80"
-            }`}
-          >
-            <Bug size={12} />
-            Créature
           </button>
           <button
             type="button"
